@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+<script src="https://cdn.tailwindcss.com"></script>
 
 const NewsHome = () => {
     const [news, setNews] = useState([]);
@@ -19,18 +20,18 @@ const NewsHome = () => {
                 headers: { Authorization: `Token ${token}` }
             })
                 .then(response => setNews(response.data))
-                .catch(err => setError('Failed to fetch news'));
+                .catch(err => setError('Failed to fetch news: ' + err.message));
         }
     }, [token]);
 
     const handleLogin = () => {
-        axios.post(`${API_URL}api-token-auth/`, { email, password })
+        axios.post(`${API_URL}api-token-auth/`, { username: email, password })
             .then(response => {
                 setToken(response.data.token);
                 localStorage.setItem('token', response.data.token);
                 setError('');
             })
-            .catch(err => setError('Invalid credentials'));
+            .catch(err => setError('Invalid credentials: ' + err.message));
     };
 
     const handleLogout = () => {
@@ -52,7 +53,7 @@ const NewsHome = () => {
                     setTitle('');
                     setDesc('');
                 })
-                .catch(err => setError('Failed to update news'));
+                .catch(err => setError('Failed to update news: ' + err.message));
         } else {
             axios.post(`${API_URL}news/`, data, config)
                 .then(response => {
@@ -60,14 +61,14 @@ const NewsHome = () => {
                     setTitle('');
                     setDesc('');
                 })
-                .catch(err => setError('Failed to create news'));
+                .catch(err => setError('Failed to create news: ' + err.message));
         }
     };
 
     const handleDelete = (id) => {
         axios.delete(`${API_URL}news/${id}/`, { headers: { Authorization: `Token ${token}` } })
             .then(() => setNews(news.filter(n => n.id !== id)))
-            .catch(err => setError('Failed to delete news'));
+            .catch(err => setError('Failed to delete news: ' + err.message));
     };
 
     const handleEdit = (newsItem) => {
@@ -77,107 +78,94 @@ const NewsHome = () => {
     };
 
     return (
-        <div className="container mx-auto p-4">
-            <h1 className="text-3xl font-bold mb-4">News Portal</h1>
-
-            {error && <p className="text-red-500">{error}</p>}
-
+        <div className="bg-black max-w-7xl mx-auto px-4 py-6 justify-center">
+            {error && <div className="bg-red-100 text-red-700 p-4 rounded mb-4 text-center">{error}</div>}
             {!token ? (
-                <div className="mb-4">
-                    <h2 className="text-xl font-semibold">Login</h2>
+                <div className="bg-black shadow-md rounded p-6 w-full max-w-md mx-auto">
+                    <h4 className="text-xl font-semibold text-center mb-4">Login</h4>
                     <input
                         type="email"
+                        className="w-full mb-3 p-2 border border-gray-300 rounded"
                         placeholder="Email"
                         value={email}
                         onChange={e => setEmail(e.target.value)}
-                        className="border p-2 mr-2"
                     />
                     <input
                         type="password"
+                        className="w-full mb-3 p-2 border border-gray-300 rounded"
                         placeholder="Password"
                         value={password}
                         onChange={e => setPassword(e.target.value)}
-                        className="border p-2 mr-2"
                     />
-                    <button
-                        onClick={handleLogin}
-                        className="bg-blue-500 text-white p-2 rounded"
-                    >
-                        Login
-                    </button>
+                    <button onClick={handleLogin} className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Login</button>
                 </div>
             ) : (
-                <div className="mb-4">
-                    <button
-                        onClick={handleLogout}
-                        className="bg-red-500 text-white p-2 rounded"
-                    >
-                        Logout
-                    </button>
-                </div>
-            )}
-
-            {token && (
-                <div className="mb-4">
-                    <h2 className="text-xl font-semibold">{editingNews ? 'Edit News' : 'Add News'}</h2>
-                    <input
-                        type="text"
-                        placeholder="Title"
-                        value={title}
-                        onChange={e => setTitle(e.target.value)}
-                        className="border p-2 w-full mb-2"
-                    />
-                    <textarea
-                        placeholder="Description"
-                        value={desc}
-                        onChange={e => setDesc(e.target.value)}
-                        className="border p-2 w-full mb-2"
-                    />
-                    <button
-                        onClick={handleSubmit}
-                        className="bg-green-500 text-white p-2 rounded"
-                    >
-                        {editingNews ? 'Update' : 'Create'}
-                    </button>
-                    {editingNews && (
-                        <button
-                            onClick={() => { setEditingNews(null); setTitle(''); setDesc(''); }}
-                            className="bg-gray-500 text-white p-2 rounded ml-2"
-                        >
-                            Cancel
-                        </button>
-                    )}
-                </div>
-            )}
-
-            <h2 className="text-xl font-semibold mb-2">News List</h2>
-            <div className="grid gap-4">
-                {news.map(item => (
-                    <div key={item.id} className="border p-4 rounded">
-                        <h3 className="text-lg font-bold">{item.news_title}</h3>
-                        <p>{item.news_desc}</p>
-                        <p className="text-sm text-gray-600">
-                            Published: {new Date(item.published_date).toLocaleString()} | By: {item.created_by}
-                        </p>
-                        {token && (
-                            <div className="mt-2">
-                                <button
-                                    onClick={() => handleEdit(item)}
-                                    className="bg-yellow-500 text-white p-1 rounded mr-2"
-                                >
-                                    Edit
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(item.id)}
-                                    className="bg-red-500 text-white p-1 rounded"
-                                >
-                                    Delete
-                                </button>
-                            </div>
-                        )}
+                <div className="bg-black shadow-md rounded p-6">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-2xl font-bold">News Management</h2>
+                        <button className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600" onClick={handleLogout}>Logout</button>
                     </div>
-                ))}
-            </div>
+
+                    <div className="mb-6">
+                        <input
+                            type="text"
+                            className="w-full mb-2 p-2 border border-gray-300 rounded"
+                            placeholder="Title"
+                            value={title}
+                            onChange={e => setTitle(e.target.value)}
+                        />
+                        <textarea
+                            className="w-full mb-2 p-2 border border-gray-300 rounded"
+                            placeholder="Description"
+                            value={desc}
+                            onChange={e => setDesc(e.target.value)}
+                        />
+                        <div className="flex gap-2">
+                            <button onClick={handleSubmit} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                                {editingNews ? 'Update' : 'Create'}
+                            </button>
+                            {editingNews && (
+                                <button onClick={() => { setEditingNews(null); setTitle(''); setDesc(''); }} className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500">Cancel</button>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full table-auto border border-gray-200">
+                            <thead>
+                                <tr className="bg-black-100">
+                                    <th className="border px-4 py-2 text-left">Id</th>
+                                    <th className="border px-4 py-2 text-left">Title</th>
+                                    <th className="border px-4 py-2 text-left">Description</th>
+                                    <th className="border px-4 py-2 text-left">Date</th>
+                                    <th className="border px-4 py-2 text-left">Author</th>
+                                    <th className="border px-4 py-2 text-left">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {news.length > 0 ? news.map((item, index) => (
+                                    <tr key={item.id}>
+                                        <td className="border px-4 py-2">{index + 1}</td>
+                                        <td className="border px-4 py-2">{item.news_title}</td>
+                                        <td className="border px-4 py-2">{item.news_desc}</td>
+                                        <td className="border px-4 py-2">{new Date(item.published_date).toLocaleString()}</td>
+                                        <td className="border px-4 py-2">{item.created_by || 'Unknown'}</td>
+                                        <td className="border px-4 py-2 space-x-2">
+                                            <button onClick={() => handleEdit(item)} className="text-yellow-500 hover:underline">Edit</button>
+                                            <button onClick={() => handleDelete(item.id)} className="text-red-600 hover:underline">Delete</button>
+                                        </td>
+                                    </tr>
+                                )) : (
+                                    <tr>
+                                        <td colSpan="6" className="text-center p-4">No news available.</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                        <div className="mt-4 text-sm text-gray-600">Showing <b>{news.length}</b> out of <b>{news.length}</b> entries</div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
