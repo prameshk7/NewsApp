@@ -1,14 +1,12 @@
-import { useState } from 'react'
-import './App.css'
+import React from 'react';
+import NewsHome from './components/News/newsHome'; // Adjust the import path based on your folder structure
 
 function App() {
   return (
     <div className="App">
-      <p className="read-the-docs">
-        App
-      </p>
+      <NewsHome />
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

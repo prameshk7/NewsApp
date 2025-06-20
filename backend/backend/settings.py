@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     'corsheaders',  
 ]
 
+AUTH_USER_MODEL = 'userBack.User'  
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
