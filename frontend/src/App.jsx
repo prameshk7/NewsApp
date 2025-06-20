@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Login from './components/login';
-import Advert from './components/advert';
+import Advert from './components/adverts';
 import Blog from './components/blog';
 import News from './components/news';
 import User from './components/user';

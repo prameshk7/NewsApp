@@ -6,14 +6,14 @@ function Blog({ user }) {
   const [form, setForm] = useState({ blg_title: '', desc: '', blg_image: [] });
 
   useEffect(() => {
-    axios.get('http://localhost:8000/api/blogs/', {
+    axios.get('http://localhost:8000/api/v1/blogs/', {
       headers: { Authorization: `Token ${user.token}` }
     }).then(response => setBlogs(response.data));
   }, [user.token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await axios.post('http://localhost:8000/api/blogs/', form, {
+    await axios.post('http://localhost:8000/api/v1/blogs/', form, {
       headers: { Authorization: `Token ${user.token}` }
     });
     setForm({ blg_title: '', desc: '', blg_image: [] });

@@ -6,14 +6,14 @@ function News({ user }) {
   const [form, setForm] = useState({ title: '', desc: '', category: '', type: '', images: [] });
 
   useEffect(() => {
-    axios.get('http://localhost:8000/api/news/', {
+    axios.get('http://localhost:8000/api/v1/news/', {
       headers: { Authorization: `Token ${user.token}` }
     }).then(response => setNews(response.data));
   }, [user.token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await axios.post('http://localhost:8000/api/news/', form, {
+    await axios.post('http://localhost:8000/api/v1/news/', form, {
       headers: { Authorization: `Token ${user.token}` }
     });
     setForm({ title: '', desc: '', category: '', type: '', images: [] });

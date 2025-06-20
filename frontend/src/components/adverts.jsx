@@ -6,14 +6,14 @@ function Advert({ user }) {
   const [form, setForm] = useState({ ad_name: '', ad_images: [] });
 
   useEffect(() => {
-    axios.get('http://localhost:8000/api/adverts/', {
+    axios.get('http://localhost:8000/api/v1/adverts/', {
       headers: { Authorization: `Token ${user.token}` }
     }).then(response => setAdverts(response.data));
   }, [user.token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await axios.post('http://localhost:8000/api/adverts/', form, {
+    await axios.post('http://localhost:8000/api/v1/adverts/', form, {
       headers: { Authorization: `Token ${user.token}` }
     });
     setForm({ ad_name: '', ad_images: [] });

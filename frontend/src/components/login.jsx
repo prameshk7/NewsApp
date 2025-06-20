@@ -8,7 +8,7 @@ function Login({ setUser, setActiveSection }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:8000/api/login/', credentials);
+      const response = await axios.post('http://localhost:8000/api/v1/login/', credentials);
       localStorage.setItem('token', response.data.token);
       setUser({ username: credentials.username, token: response.data.token });
       setActiveSection('news');

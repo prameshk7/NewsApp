@@ -5,14 +5,14 @@ function User({ user }) {
   const [profile, setProfile] = useState({ firstname: '', lastname: '' });
 
   useEffect(() => {
-    axios.get('http://localhost:8000/api/user/profile/', {
+    axios.get('http://localhost:8000/api/v1/user/profile/', {
       headers: { Authorization: `Token ${user.token}` }
     }).then(response => setProfile(response.data));
   }, [user.token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await axios.put('http://localhost:8000/api/user/profile/', profile, {
+    await axios.put('http://localhost:8000/api/v1/user/profile/', profile, {
       headers: { Authorization: `Token ${user.token}` }
     });
   };
