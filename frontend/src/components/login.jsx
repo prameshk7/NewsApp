@@ -4,43 +4,108 @@ import axios from 'axios';
 function Login({ setUser, setActiveSection }) {
   const [credentials, setCredentials] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!credentials.username || !credentials.password) {
+      setError('Please fill in all fields.');
+      return;
+    }
+    setLoading(true);
     try {
-      const response = await axios.post('http://localhost:8000/api/v1/login/', credentials);
-      localStorage.setItem('token', response.data.token);
-      setUser({ username: credentials.username, token: response.data.token });
+      const response = await axios.post('http://localhost:8000/api/v1/login/', credentials, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const { token } = response.data;
+      localStorage.setItem('token', token);
+      setUser({ username: credentials.username, token });
       setActiveSection('news');
     } catch (err) {
-      setError('Invalid credentials');
+      setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto p-4 bg-white shadow rounded mt-10">
-      <h2 className="text-xl font-semibold mb-4">Login</h2>
-      {error && <p className="text-red-500 mb-2">{error}</p>}
-      <form onSubmit={handleSubmit}>
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Username</label>
+    <div style={{
+      maxWidth: '480px',
+      margin: '40px auto',
+      padding: '24px',
+      backgroundColor: '#FFFFFF',
+      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+      borderRadius: '8px',
+      position: 'relative',
+    }}>
+      <h2 style={{ fontSize: '24px', fontWeight: '600', color: '#1F2A44', marginBottom: '24px', textAlign: 'center' }}>Admin Login</h2>
+      {error && (
+        <div style={{
+          backgroundColor: '#FEE2E2',
+          color: '#DC2626',
+          padding: '8px',
+          borderRadius: '4px',
+          marginBottom: '16px',
+          textAlign: 'center',
+        }}>
+          {error}
+        </div>
+      )}
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div>
+          <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px', display: 'block' }}>Username</label>
           <input
             type="text"
             value={credentials.username}
             onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
-            className="w-full p-2 border rounded"
+            style={{
+              width: '100%',
+              padding: '8px',
+              border: '1px solid #D1D5DB',
+              borderRadius: '4px',
+              fontSize: '16px',
+              color: '#1F2A44',
+            }}
+            required
+            disabled={loading}
           />
         </div>
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Password</label>
+        <div>
+          <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px', display: 'block' }}>Password</label>
           <input
             type="password"
             value={credentials.password}
             onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
-            className="w-full p-2 border rounded"
+            style={{
+              width: '100%',
+              padding: '8px',
+              border: '1px solid #D1D5DB',
+              borderRadius: '4px',
+              fontSize: '16px',
+              color: '#1F2A44',
+            }}
+            required
+            disabled={loading}
           />
         </div>
-        <button type="submit" className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Login</button>
+        <button
+          type="submit"
+          style={{
+            padding: '10px',
+            backgroundColor: '#1F2A44',
+            color: '#FFFFFF',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            fontSize: '16px',
+            transition: 'background-color 0.3s ease',
+          }}
+          disabled={loading}
+          onMouseOver={(e) => !loading && (e.target.style.backgroundColor = '#2C3B2A')}
+          onMouseOut={(e) => !loading && (e.target.style.backgroundColor = '#1F2A44')}
+        >
+          {loading ? 'Logging in...' : 'Login'}
+        </button>
       </form>
     </div>
   );

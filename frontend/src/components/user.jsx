@@ -3,45 +3,148 @@ import axios from 'axios';
 
 function User({ user }) {
   const [profile, setProfile] = useState({ firstname: '', lastname: '' });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    setLoading(true);
     axios.get('http://localhost:8000/api/v1/user/profile/', {
       headers: { Authorization: `Token ${user.token}` }
-    }).then(response => setProfile(response.data));
+    }).then(response => setProfile(response.data))
+      .catch(err => setError('Failed to fetch profile.'))
+      .finally(() => setLoading(false));
   }, [user.token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await axios.put('http://localhost:8000/api/v1/user/profile/', profile, {
-      headers: { Authorization: `Token ${user.token}` }
-    });
+    setLoading(true);
+    try {
+      await axios.put('http://localhost:8000/api/v1/user/profile/', profile, {
+        headers: { Authorization: `Token ${user.token}` }
+      });
+      setError('');
+    } catch (err) {
+      setError('Failed to update profile.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="p-4">
-      <h2 className="text-xl font-semibold mb-4">Profile</h2>
-      <form onSubmit={handleSubmit} className="max-w-md bg-white p-4 shadow rounded">
-        <p>Email: {user.email} (Read-only)</p>
-        <p>Username: {user.username} (Read-only)</p>
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">First Name</label>
+    <div style={{
+      padding: '24px',
+      backgroundColor: '#F9FAFB',
+      minHeight: 'calc(100vh - 64px)',
+    }}>
+      <h2 style={{
+        fontSize: '24px',
+        fontWeight: '600',
+        color: '#1F2A44',
+        marginBottom: '24px',
+      }}>User Profile</h2>
+      {error && (
+        <div style={{
+          backgroundColor: '#FEE2E2',
+          color: '#DC2626',
+          padding: '8px',
+          borderRadius: '4px',
+          marginBottom: '16px',
+        }}>
+          {error}
+        </div>
+      )}
+      <form onSubmit={handleSubmit} style={{
+        backgroundColor: '#FFFFFF',
+        padding: '24px',
+        borderRadius: '8px',
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+        maxWidth: '480px',
+      }}>
+        <div>
+          <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>Email</label>
+          <input
+            type="text"
+            value={user.email || ''}
+            readOnly
+            style={{
+              width: '100%',
+              padding: '8px',
+              border: '1px solid #D1D5DB',
+              borderRadius: '4px',
+              fontSize: '16px',
+              backgroundColor: '#F9FAFB',
+            }}
+          />
+        </div>
+        <div>
+          <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>Username</label>
+          <input
+            type="text"
+            value={user.username || ''}
+            readOnly
+            style={{
+              width: '100%',
+              padding: '8px',
+              border: '1px solid #D1D5DB',
+              borderRadius: '4px',
+              fontSize: '16px',
+              backgroundColor: '#F9FAFB',
+            }}
+          />
+        </div>
+        <div>
+          <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>First Name</label>
           <input
             type="text"
             value={profile.firstname}
             onChange={(e) => setProfile({ ...profile, firstname: e.target.value })}
-            className="w-full p-2 border rounded"
+            style={{
+              width: '100%',
+              padding: '8px',
+              border: '1px solid #D1D5DB',
+              borderRadius: '4px',
+              fontSize: '16px',
+            }}
+            disabled={loading}
           />
         </div>
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Last Name</label>
+        <div>
+          <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>Last Name</label>
           <input
             type="text"
             value={profile.lastname}
             onChange={(e) => setProfile({ ...profile, lastname: e.target.value })}
-            className="w-full p-2 border rounded"
+            style={{
+              width: '100%',
+              padding: '8px',
+              border: '1px solid #D1D5DB',
+              borderRadius: '4px',
+              fontSize: '16px',
+            }}
+            disabled={loading}
           />
         </div>
-        <button type="submit" className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Update Profile</button>
+        <button
+          type="submit"
+          style={{
+            padding: '10px',
+            backgroundColor: '#1F2A44',
+            color: '#FFFFFF',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            fontSize: '16px',
+            transition: 'background-color 0.3s ease',
+          }}
+          disabled={loading}
+          onMouseOver={(e) => !loading && (e.target.style.backgroundColor = '#2C3B2A')}
+          onMouseOut={(e) => !loading && (e.target.style.backgroundColor = '#1F2A44')}
+        >
+          {loading ? 'Saving...' : 'Update Profile'}
+        </button>
       </form>
     </div>
   );

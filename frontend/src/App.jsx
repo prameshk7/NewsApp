@@ -1,13 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Login from './components/login';
 import Advert from './components/adverts';
 import Blog from './components/blog';
 import News from './components/news';
 import User from './components/user';
+import axios from 'axios';
+import './App.css';
 
 function App() {
   const [activeSection, setActiveSection] = useState('login');
   const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Token ${token}`;
+      setUser({ username: localStorage.getItem('username'), token });
+    }
+  }, []);
 
   const renderSection = () => {
     switch (activeSection) {
@@ -30,15 +40,6 @@ function App() {
     <div className="min-h-screen bg-gray-100">
       {user ? (
         <div className="container mx-auto p-4">
-          <nav className="bg-white p-4 mb-4 shadow">
-            <ul className="flex space-x-4">
-              <li><button onClick={() => setActiveSection('news')} className="text-blue-500 hover:text-blue-700">News</button></li>
-              <li><button onClick={() => setActiveSection('advert')} className="text-blue-500 hover:text-blue-700">Adverts</button></li>
-              <li><button onClick={() => setActiveSection('blog')} className="text-blue-500 hover:text-blue-700">Blogs</button></li>
-              <li><button onClick={() => setActiveSection('user')} className="text-blue-500 hover:text-blue-700">Profile</button></li>
-              <li><button onClick={() => { setUser(null); setActiveSection('login'); }} className="text-red-500 hover:text-red-700">Logout</button></li>
-            </ul>
-          </nav>
           {renderSection()}
         </div>
       ) : (

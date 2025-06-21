@@ -15,11 +15,13 @@ class UserRegistrationView(APIView):
 
 class UserLoginView(APIView):
     def post(self, request):
-        user = authenticate(
-            username=request.data.get('username'),
-            password=request.data.get('password')
-        )
-        if user:
-            token, _ = Token.objects.get_or_create(user=user)
-            return Response({'token': token.key})
-        return Response({'error': 'Invalid credentials'}, status=400)
+        username = request.data.get('username')
+        password = request.data.get('password')
+        print(f"Attempting login with username: {username}, password: {password}")
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            token, created = Token.objects.get_or_create(user=user)
+            return Response({'token': token.key, 'message': 'Login successful'})
+        return Response({'error': 'Invalid username or password'}, status=401)
+    
+    
