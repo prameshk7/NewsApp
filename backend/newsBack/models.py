@@ -22,7 +22,8 @@ class News(models.Model):
     desc = models.TextField()
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
     type = models.ForeignKey(Type, on_delete=models.SET_NULL, null=True, blank=True)
-    images = models.JSONField(default=list)  # Store multiple image URLs or paths
+    images = models.JSONField(default=list)
+    image_files = models.ImageField(upload_to='news_images/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 

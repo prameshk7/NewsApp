@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .models import Advert
+from .models import Advert, AdvertMedia
 from .serializers import AdvertSerializer
 
 class AdvertListCreateView(APIView):
@@ -39,3 +39,5 @@ class AdvertRetrieveUpdateDestroyView(APIView):
         advert = Advert.objects.get(pk=pk)
         advert.delete()
         return Response(status=204)
+    
+    

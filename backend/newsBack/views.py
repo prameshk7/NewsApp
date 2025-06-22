@@ -1,8 +1,38 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .models import News
-from .serializers import NewsSerializer
+from .models import News, Category, Type
+from .serializers import NewsSerializer, CategorySerializer, TypeSerializer
+
+class CategoryListCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        categories = Category.objects.all()
+        serializer = CategorySerializer(categories, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = CategorySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(created_by=request.user)
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)
+
+class TypeListCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        types = Type.objects.all()
+        serializer = TypeSerializer(types, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = TypeSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(created_by=request.user)
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)
 
 class NewsListCreateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -13,7 +43,7 @@ class NewsListCreateView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        serializer = NewsSerializer(data=request.data)
+        serializer = NewsSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save(created_by=request.user)
             return Response(serializer.data, status=201)
@@ -29,7 +59,7 @@ class NewsRetrieveUpdateDestroyView(APIView):
 
     def put(self, request, pk):
         news = News.objects.get(pk=pk)
-        serializer = NewsSerializer(news, data=request.data)
+        serializer = NewsSerializer(news, data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -39,3 +69,5 @@ class NewsRetrieveUpdateDestroyView(APIView):
         news = News.objects.get(pk=pk)
         news.delete()
         return Response(status=204)
+    
+    

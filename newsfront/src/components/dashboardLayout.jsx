@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FiMenu, FiX, FiUser, FiLogOut, FiHome, FiBox, FiFileText, FiImage, FiEdit } from 'react-icons/fi';
+import { FiMenu,FiList, FiX, FiUser, FiLogOut, FiHome, FiBox, FiFileText, FiImage, FiEdit } from 'react-icons/fi';
 
 const DashboardLayout = ({ title, sidebarItems, renderContent, currentPage, setCurrentPage, handleLogout }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -10,6 +10,8 @@ const DashboardLayout = ({ title, sidebarItems, renderContent, currentPage, setC
       case 'adverts': return <FiImage />;
       case 'blogs': return <FiEdit />;
       case 'user': return <FiUser />;
+      case 'category': return <FiList />;
+      case 'type': return <FiList />;
       case 'dashboard': return <FiHome />;
       default: return <FiBox />;
     }
@@ -23,7 +25,7 @@ const DashboardLayout = ({ title, sidebarItems, renderContent, currentPage, setC
     }}>
       <aside style={{
         width: isCollapsed ? '80px' : '260px',
-        backgroundColor: '#1E40AF',
+        backgroundColor: '#1E41AF',
         boxShadow: '2px 0 10px rgba(0, 0, 0, 0.1)',
         transition: 'width 0.3s ease',
         height: '100vh',

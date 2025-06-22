@@ -39,3 +39,4 @@ class BlogRetrieveUpdateDestroyView(APIView):
         blog = Blog.objects.get(pk=pk)
         blog.delete()
         return Response(status=204)
+    

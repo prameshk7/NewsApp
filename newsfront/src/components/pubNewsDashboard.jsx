@@ -1,26 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import DashboardLayout from './dashboardLayout';
 import News from './news';
 import Advert from './adverts';
 import Blog from './blog';
 import User from './user';
+import Category from './category';
+import Type from './type';
 
-const PubNewsDashboard = ({ user }) => {
+const PubNewsDashboard = ({ user, categories, types, setCategories, setTypes, setUser }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [currentPage, setCurrentPage] = useState('news'); // Default page
 
   useEffect(() => {
-    // Sync URL with currentPage on initial load or navigation
-    const path = window.location.pathname.split('/dashboard/')[1] || 'news';
+    const path = location.pathname.split('/dashboard/')[1] || 'news';
     if (currentPage !== path) {
       setCurrentPage(path);
     }
-  }, []);
+  }, [location.pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('username');
+    setUser(null);
     navigate('/login');
   };
 
@@ -29,11 +32,15 @@ const PubNewsDashboard = ({ user }) => {
     { label: 'Adverts', page: 'adverts' },
     { label: 'Blogs', page: 'blogs' },
     { label: 'User', page: 'user' },
+    { label: 'Categories', page: 'categories' },
+    { label: 'Types', page: 'types' },
   ];
 
   const renderContent = () => {
     switch (currentPage) {
-      case 'news': return <News user={user} />;
+      case 'news': return <News user={user} categories={categories} types={types} />;
+      case 'categories': return <Category user={user} onCategoriesUpdate={setCategories} />;
+      case 'types': return <Type user={user} onTypesUpdate={setTypes} />;
       case 'adverts': return <Advert user={user} />;
       case 'blogs': return <Blog user={user} />;
       case 'user': return <User user={user} />;
@@ -114,7 +121,7 @@ const PubNewsDashboard = ({ user }) => {
 
   return (
     <DashboardLayout
-      title="Admin Dashboard"
+      title="Dashboard"
       sidebarItems={sidebarItems()}
       currentPage={currentPage}
       setCurrentPage={setCurrentPage}

@@ -2,32 +2,66 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 function User({ user }) {
-  const [profile, setProfile] = useState({ firstname: '', lastname: '' });
+  const [profile, setProfile] = useState({ firstname: '', lastname: '', email: '', profile_image: null });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [originalProfile, setOriginalProfile] = useState({ firstname: '', lastname: '', email: '', profile_image: null }); // To store original values for cancel
 
   useEffect(() => {
     setLoading(true);
-    axios.get('http://localhost:8000/api/v1/user/profile/', {
+    axios.get('http://localhost:8000/api/v1/profile/', {
       headers: { Authorization: `Token ${user.token}` }
-    }).then(response => setProfile(response.data))
-      .catch(err => setError('Failed to fetch profile.'))
+    }).then(response => {
+      const data = response.data;
+      setProfile({
+        firstname: data.firstname || '',
+        lastname: data.lastname || '',
+        email: data.email || '',
+        profile_image: data.profile_image || null,
+      });
+      setOriginalProfile({
+        firstname: data.firstname || '',
+        lastname: data.lastname || '',
+        email: data.email || '',
+        profile_image: data.profile_image || null,
+      });
+    }).catch(err => setError('Failed to fetch profile.'))
       .finally(() => setLoading(false));
   }, [user.token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    const formData = new FormData();
+    formData.append('firstname', profile.firstname);
+    formData.append('lastname', profile.lastname);
+    formData.append('email', profile.email);
+    if (profile.profile_image instanceof File) {
+      formData.append('profile_image', profile.profile_image);
+    }
+
     try {
-      await axios.put('http://localhost:8000/api/v1/user/profile/', profile, {
-        headers: { Authorization: `Token ${user.token}` }
+      await axios.put('http://localhost:8000/api/v1/profile/', formData, {
+        headers: { Authorization: `Token ${user.token}`, 'Content-Type': 'multipart/form-data' }
       });
       setError('');
+      setOriginalProfile({ ...profile }); // Update original profile after save
+      setIsEditing(false); // Exit edit mode after successful save
     } catch (err) {
       setError('Failed to update profile.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEdit = () => {
+    setIsEditing(true); // Enter edit mode
+  };
+
+  const handleCancel = () => {
+    setProfile({ ...originalProfile }); // Revert to original values
+    setIsEditing(false); // Exit edit mode
   };
 
   return (
@@ -66,17 +100,18 @@ function User({ user }) {
         <div>
           <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>Email</label>
           <input
-            type="text"
-            value={user.email || ''}
-            readOnly
+            type="email"
+            value={profile.email}
+            onChange={(e) => setProfile({ ...profile, email: e.target.value })}
             style={{
               width: '100%',
               padding: '8px',
               border: '1px solid #D1D5DB',
               borderRadius: '4px',
               fontSize: '16px',
-              backgroundColor: '#F9FAFB',
             }}
+            required
+            disabled={loading || !isEditing}
           />
         </div>
         <div>
@@ -108,7 +143,8 @@ function User({ user }) {
               borderRadius: '4px',
               fontSize: '16px',
             }}
-            disabled={loading}
+            required
+            disabled={loading || !isEditing}
           />
         </div>
         <div>
@@ -124,27 +160,85 @@ function User({ user }) {
               borderRadius: '4px',
               fontSize: '16px',
             }}
-            disabled={loading}
+            required
+            disabled={loading || !isEditing}
           />
         </div>
-        <button
-          type="submit"
-          style={{
-            padding: '10px',
-            backgroundColor: '#1F2A44',
-            color: '#FFFFFF',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            fontSize: '16px',
-            transition: 'background-color 0.3s ease',
-          }}
-          disabled={loading}
-          onMouseOver={(e) => !loading && (e.target.style.backgroundColor = '#2C3B2A')}
-          onMouseOut={(e) => !loading && (e.target.style.backgroundColor = '#1F2A44')}
-        >
-          {loading ? 'Saving...' : 'Update Profile'}
-        </button>
+        <div>
+          <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>Profile Image</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setProfile({ ...profile, profile_image: e.target.files[0] })}
+            style={{ width: '100%', padding: '8px', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '16px' }}
+            disabled={loading || !isEditing}
+          />
+          {profile.profile_image && typeof profile.profile_image === 'string' && (
+            <img src={`/media/${profile.profile_image}`} alt="Profile" style={{ width: '100px', marginTop: '8px' }} />
+          )}
+        </div>
+        {isEditing ? (
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              type="submit"
+              style={{
+                padding: '10px',
+                backgroundColor: '#1F2A44',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                fontSize: '16px',
+                flex: 1,
+                transition: 'background-color 0.3s ease',
+              }}
+              disabled={loading}
+              onMouseOver={(e) => !loading && (e.target.style.backgroundColor = '#2C3B2A')}
+              onMouseOut={(e) => !loading && (e.target.style.backgroundColor = '#1F2A44')}
+            >
+              {loading ? 'Saving...' : 'Save'}
+            </button>
+            <button
+              type="button"
+              onClick={handleCancel}
+              style={{
+                padding: '10px',
+                backgroundColor: '#DC2626',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                fontSize: '16px',
+                flex: 1,
+                transition: 'background-color 0.3s ease',
+              }}
+              disabled={loading}
+              onMouseOver={(e) => !loading && (e.target.style.backgroundColor = '#B91C1C')}
+              onMouseOut={(e) => !loading && (e.target.style.backgroundColor = '#DC2626')}
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={handleEdit}
+            style={{
+              padding: '10px',
+              backgroundColor: '#1F2A44',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              transition: 'background-color 0.3s ease',
+            }}
+            onMouseOver={(e) => (e.target.style.backgroundColor = '#2C3B2A')}
+            onMouseOut={(e) => (e.target.style.backgroundColor = '#1F2A44')}
+          >
+            Edit Profile
+          </button>
+        )}
       </form>
     </div>
   );
