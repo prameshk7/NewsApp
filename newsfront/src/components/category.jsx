@@ -1,19 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/axiosConfig';
 
 function Category({ user, onCategoriesUpdate }) {
   const [categories, setCategories] = useState([]);
-  const [form, setForm] = useState({ name: '' });
+  const [form, setForm] = useState({ id: null, name: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     setLoading(true);
-    axios.get('http://localhost:8000/api/v1/categories/', { headers: { Authorization: `Token ${user.token}` } })
-      .then(response => setCategories(response.data))
+    api.get('categories/')
+      .then(response => {
+        console.log('Category data on fetch:', response.data);
+        setCategories(response.data);
+      })
       .catch(err => setError('Failed to fetch categories.'))
       .finally(() => setLoading(false));
-  }, [user.token]);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,35 +27,48 @@ function Category({ user, onCategoriesUpdate }) {
     }
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost:8000/api/v1/categories/', form, {
-        headers: { Authorization: `Token ${user.token}` },
+      const response = await api({
+        method: editing ? 'put' : 'post',
+        url: editing ? `categories/${form.id}/` : 'categories/',
+        data: { name: form.name },
       });
-      setCategories([...categories, response.data]);
-      setForm({ name: '' });
+      const updatedCategory = response.data;
+      if (editing) {
+        setCategories(categories.map(c => c.id === form.id ? updatedCategory : c));
+      } else {
+        setCategories([...categories, updatedCategory]);
+      }
+      setForm({ id: null, name: '' });
+      setEditing(false);
       setError('');
-      if (onCategoriesUpdate) onCategoriesUpdate([...categories, response.data]);
+      if (onCategoriesUpdate) onCategoriesUpdate(categories.map(c => c.id === form.id ? updatedCategory : c));
     } catch (err) {
-      setError('Failed to add category.');
+      setError(`Failed to ${editing ? 'update' : 'add'} category.`);
       console.error(err.response?.data);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleEdit = (category) => {
+    setForm({ id: category.id, name: category.name });
+    setEditing(true);
+  };
+
   const handleDelete = async (id) => {
-    setLoading(true);
-    try {
-      await axios.delete(`http://localhost:8000/api/v1/categories/${id}/`, {
-        headers: { Authorization: `Token ${user.token}` },
-      });
-      const updatedCategories = categories.filter(cat => cat.id !== id);
-      setCategories(updatedCategories);
-      if (onCategoriesUpdate) onCategoriesUpdate(updatedCategories);
-    } catch (err) {
-      setError('Failed to delete category.');
-      console.error(err.response?.data);
-    } finally {
-      setLoading(false);
+    if (window.confirm('Are you sure you want to delete this category?')) {
+      setLoading(true);
+      try {
+        await api.delete(`categories/${id}/`);
+        const updatedCategories = categories.filter(c => c.id !== id);
+        setCategories(updatedCategories);
+        if (onCategoriesUpdate) onCategoriesUpdate(updatedCategories);
+      } catch (err) {
+        setError('Failed to delete category.');
+        console.error(err.response?.data);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -69,7 +86,7 @@ function Category({ user, onCategoriesUpdate }) {
           <input
             type="text"
             value={form.name}
-            onChange={(e) => setForm({ name: e.target.value })}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
             style={{ width: '100%', padding: '8px', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '16px' }}
             required
             disabled={loading}
@@ -82,7 +99,7 @@ function Category({ user, onCategoriesUpdate }) {
           onMouseOver={(e) => !loading && (e.target.style.backgroundColor = '#059669')}
           onMouseOut={(e) => !loading && (e.target.style.backgroundColor = '#10B981')}
         >
-          {loading ? 'Adding...' : 'Add Category'}
+          {loading ? (editing ? 'Updating...' : 'Adding...') : (editing ? 'Update Category' : 'Add Category')}
         </button>
       </form>
       <div style={{ marginTop: '24px', backgroundColor: '#FFFFFF', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}>
@@ -93,10 +110,13 @@ function Category({ user, onCategoriesUpdate }) {
           <p style={{ color: '#374151' }}>No categories available.</p>
         ) : (
           <ul style={{ listStyle: 'none', padding: 0 }}>
-            {categories.map(cat => (
-              <li key={cat.id} style={{ padding: '8px', marginBottom: '8px', backgroundColor: '#F9FAFB', borderRadius: '4px', display: 'flex', justifyContent: 'space-between' }}>
-                {cat.name}
-                <button onClick={() => handleDelete(cat.id)} style={{ color: '#DC2626', border: 'none', background: 'none', cursor: 'pointer' }}>Delete</button>
+            {categories.map(c => (
+              <li key={c.id} style={{ padding: '8px', marginBottom: '8px', backgroundColor: '#F9FAFB', borderRadius: '4px', display: 'flex', justifyContent: 'space-between' }}>
+                {c.name}
+                <div>
+                  <button onClick={() => handleEdit(c)} style={{ color: '#2563EB', border: 'none', background: 'none', cursor: 'pointer', marginRight: '10px' }}>Edit</button>
+                  <button onClick={() => handleDelete(c.id)} style={{ color: '#DC2626', border: 'none', background: 'none', cursor: 'pointer' }}>Delete</button>
+                </div>
               </li>
             ))}
           </ul>

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import News, Category, Type
+from .models import News, Category, Type, Video
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -39,4 +39,16 @@ class NewsSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
     
-    
+class VideoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Video
+        fields = ['id', 'video_url', 'created_by']
+        extra_kwargs = {
+            'created_by': {'read_only': True},
+        }
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        if request and hasattr(request, 'user') and request.user.is_authenticated:
+            validated_data['created_by'] = request.user
+        return super().create(validated_data)

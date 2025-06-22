@@ -1,10 +1,21 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../utils/axiosConfig';
 
 function Login({ setUser, navigate }) {
   const [credentials, setCredentials] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const fetchProfile = async (token) => {
+    try {
+      const response = await api.get('profile/');
+      console.log('Profile response:', response.data);
+      setUser(response.data);
+    } catch (err) {
+      console.error('Failed to fetch profile:', err.response?.data || err.message);
+      setError('Failed to load user profile. Please try again.');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -15,16 +26,14 @@ function Login({ setUser, navigate }) {
     setLoading(true);
     setError('');
     try {
-      const response = await axios.post('http://localhost:8000/api/v1/login/', credentials, {
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const response = await api.post('login/', credentials);
       const { token, message } = response.data;
       if (!token || message !== 'Login successful') {
         throw new Error('Invalid login response: token or message missing/incorrect');
       }
       localStorage.setItem('token', token);
       localStorage.setItem('username', credentials.username);
-      setUser({ username: credentials.username, token });
+      await fetchProfile(token);
       navigate('/dashboard/news');
     } catch (err) {
       const errorMsg = err.response?.data?.error || err.response?.data?.message || 'Login failed. Please check your credentials.';

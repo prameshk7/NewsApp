@@ -16,7 +16,20 @@ class Type(models.Model):
 
     def __str__(self):
         return self.name
+    
 
+class Video(models.Model):
+    video_url = models.URLField(max_length=200, help_text="URL of the video")
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    def __str__(self):
+        return f"Video {self.pk} - {self.video_url}"
+
+    class Meta:
+        verbose_name = "Video"
+        verbose_name_plural = "Videos"
+        
+        
 class News(models.Model):
     title = models.CharField(max_length=200)
     desc = models.TextField()

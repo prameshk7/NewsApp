@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Editor } from '@tinymce/tinymce-react';
+import api from '../utils/axiosConfig';
 
 function News({ user, categories, types }) {
   const [news, setNews] = useState([]);
@@ -10,15 +11,15 @@ function News({ user, categories, types }) {
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
-    axios.get('http://localhost:8000/api/v1/news/', { headers: { Authorization: `Token ${user.token}` } })
-      .then(response => {
-        console.log('News data on fetch:', response.data); // Debug: Check image_files on every fetch
-        setNews(response.data);
-      })
-      .catch(err => setError('Failed to fetch news.'))
-      .finally(() => setLoading(false));
-  }, [user.token]);
+      setLoading(true);
+      api.get('news/')
+        .then(response => {
+          console.log('News data on fetch:', response.data);
+          setNews(response.data);
+        })
+        .catch(err => setError('Failed to fetch news.'))
+        .finally(() => setLoading(false));
+    }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -37,22 +38,11 @@ function News({ user, categories, types }) {
     try {
       let response;
       if (editing) {
-        response = await axios.put(`http://localhost:8000/api/v1/news/${form.id}/`, formData, {
-          headers: { 
-            Authorization: `Token ${user.token}`,
-            'Content-Type': 'multipart/form-data',
-          },
-        });
-        setNews(news.map(item => item.id === form.id ? response.data : item));
+        response = await api.put(`news/${form.id}/`, formData);
       } else {
-        response = await axios.post('http://localhost:8000/api/v1/news/', formData, {
-          headers: { 
-            Authorization: `Token ${user.token}`,
-            'Content-Type': 'multipart/form-data',
-          },
-        });
-        setNews([...news, response.data]);
+        response = await api.post('news/', formData);
       }
+      setNews(editing ? news.map(item => item.id === form.id ? response.data : item) : [...news, response.data]);
       setForm({ id: null, title: '', desc: '', category: '', type: '', image_files: '' });
       setEditing(false);
       setError('');
@@ -71,7 +61,7 @@ function News({ user, categories, types }) {
       desc: item.desc,
       category: item.category?.id?.toString() || '',
       type: item.type?.id?.toString() || '',
-      image_files: item.image_files || '', // Use the full path from the server
+      image_files: item.image_files || '',
     });
     setEditing(true);
   };
@@ -80,9 +70,7 @@ function News({ user, categories, types }) {
     if (window.confirm('Are you sure you want to delete this news?')) {
       setLoading(true);
       try {
-        await axios.delete(`http://localhost:8000/api/v1/news/${id}/`, {
-          headers: { Authorization: `Token ${user.token}` },
-        });
+        await api.delete(`news/${id}/`);
         setNews(news.filter(item => item.id !== id));
         setError('');
       } catch (err) {

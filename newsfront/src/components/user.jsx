@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/axiosConfig';
 
 function User({ user }) {
   const [profile, setProfile] = useState({ firstname: '', lastname: '', email: '', profile_image: null });
@@ -10,25 +10,25 @@ function User({ user }) {
 
   useEffect(() => {
     setLoading(true);
-    axios.get('http://localhost:8000/api/v1/profile/', {
-      headers: { Authorization: `Token ${user.token}` }
-    }).then(response => {
-      const data = response.data;
-      setProfile({
-        firstname: data.firstname || '',
-        lastname: data.lastname || '',
-        email: data.email || '',
-        profile_image: data.profile_image || null,
-      });
-      setOriginalProfile({
-        firstname: data.firstname || '',
-        lastname: data.lastname || '',
-        email: data.email || '',
-        profile_image: data.profile_image || null,
-      });
-    }).catch(err => setError('Failed to fetch profile.'))
+    api.get('profile/')
+      .then(response => {
+        const data = response.data;
+        setProfile({
+          firstname: data.firstname || '',
+          lastname: data.lastname || '',
+          email: data.email || '',
+          profile_image: data.profile_image || null,
+        });
+        setOriginalProfile({
+          firstname: data.firstname || '',
+          lastname: data.lastname || '',
+          email: data.email || '',
+          profile_image: data.profile_image || null,
+        });
+      })
+      .catch(err => setError('Failed to fetch profile.'))
       .finally(() => setLoading(false));
-  }, [user.token]);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,12 +42,10 @@ function User({ user }) {
     }
 
     try {
-      await axios.put('http://localhost:8000/api/v1/profile/', formData, {
-        headers: { Authorization: `Token ${user.token}`, 'Content-Type': 'multipart/form-data' }
-      });
+      await api.put('profile/', formData);
       setError('');
-      setOriginalProfile({ ...profile }); // Update original profile after save
-      setIsEditing(false); // Exit edit mode after successful save
+      setOriginalProfile({ ...profile });
+      setIsEditing(false);
     } catch (err) {
       setError('Failed to update profile.');
     } finally {
@@ -56,12 +54,12 @@ function User({ user }) {
   };
 
   const handleEdit = () => {
-    setIsEditing(true); // Enter edit mode
+    setIsEditing(true);
   };
 
   const handleCancel = () => {
-    setProfile({ ...originalProfile }); // Revert to original values
-    setIsEditing(false); // Exit edit mode
+    setProfile({ ...originalProfile });
+    setIsEditing(false);
   };
 
   return (

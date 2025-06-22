@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/axiosConfig';
 
 function Advert({ user }) {
   const [adverts, setAdverts] = useState([]);
@@ -10,16 +10,15 @@ function Advert({ user }) {
   const [selectedAdvertId, setSelectedAdvertId] = useState(null);
 
   useEffect(() => {
-    setLoading(true);
-    axios.get('http://localhost:8000/api/v1/adverts/', {
-      headers: { Authorization: `Token ${user.token}` }
-    }).then(response => {
-      console.log('Advert data on fetch:', response.data); // Debug: Check media array on every fetch
-      setAdverts(response.data);
-    })
-      .catch(err => setError('Failed to fetch adverts.'))
-      .finally(() => setLoading(false));
-  }, [user.token]);
+      setLoading(true);
+      api.get('adverts/')
+        .then(response => {
+          console.log('Advert data on fetch:', response.data);
+          setAdverts(response.data);
+        })
+        .catch(err => setError('Failed to fetch adverts.'))
+        .finally(() => setLoading(false));
+    }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -34,17 +33,10 @@ function Advert({ user }) {
 
     try {
       let response;
-      const url = editing
-        ? `http://localhost:8000/api/v1/adverts/${selectedAdvertId}/`
-        : 'http://localhost:8000/api/v1/adverts/';
-      const method = editing ? axios.put : axios.post;
+      const url = editing ? `adverts/${selectedAdvertId}/` : 'adverts/';
+      const method = editing ? api.put : api.post;
 
-      response = await method(url, formData, {
-        headers: { 
-          Authorization: `Token ${user.token}`,
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      response = await method(url, formData);
       if (editing) {
         setAdverts(adverts.map(item => item.id === selectedAdvertId ? response.data : item));
       } else {
@@ -63,7 +55,7 @@ function Advert({ user }) {
   };
 
   const handleEdit = (advert) => {
-    setForm({ ad_name: advert.ad_name, media: [] }); // Media files need re-upload for simplicity
+    setForm({ ad_name: advert.ad_name, media: [] });
     setEditing(true);
     setSelectedAdvertId(advert.id);
   };
@@ -72,9 +64,7 @@ function Advert({ user }) {
     if (window.confirm('Are you sure you want to delete this advert?')) {
       setLoading(true);
       try {
-        await axios.delete(`http://localhost:8000/api/v1/adverts/${id}/`, {
-          headers: { Authorization: `Token ${user.token}` },
-        });
+        await api.delete(`adverts/${id}/`);
         setAdverts(adverts.filter(item => item.id !== id));
         setError('');
       } catch (err) {
@@ -86,7 +76,6 @@ function Advert({ user }) {
     }
   };
 
-  // Function to determine media type and return appropriate tag
   const renderMedia = (filePath) => {
     const extension = filePath.split('.').pop().toLowerCase();
     const src = `http://localhost:8000${filePath}`;
@@ -101,7 +90,7 @@ function Advert({ user }) {
         </video>
       );
     }
-    return null; // Unsupported type
+    return null;
   };
 
   return (

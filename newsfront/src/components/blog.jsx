@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/axiosConfig';
 import {Editor} from '@tinymce/tinymce-react';
 
 function Blog({ user }) {
@@ -12,15 +12,14 @@ function Blog({ user }) {
 
   useEffect(() => {
     setLoading(true);
-    axios.get('http://localhost:8000/api/v1/blogs/', {
-      headers: { Authorization: `Token ${user.token}` }
-    }).then(response => {
-      console.log('Blog data on fetch:', response.data); // Debug: Check images array on every fetch
-      setBlogs(response.data);
-    })
+    api.get('blogs/')
+      .then(response => {
+        console.log('Blog data on fetch:', response.data);
+        setBlogs(response.data);
+      })
       .catch(err => setError('Failed to fetch blogs.'))
       .finally(() => setLoading(false));
-  }, [user.token]);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -36,17 +35,10 @@ function Blog({ user }) {
 
     try {
       let response;
-      const url = editing
-        ? `http://localhost:8000/api/v1/blogs/${selectedBlogId}/`
-        : 'http://localhost:8000/api/v1/blogs/';
-      const method = editing ? axios.put : axios.post;
+      const url = editing ? `blogs/${selectedBlogId}/` : 'blogs/';
+      const method = editing ? api.put : api.post;
 
-      response = await method(url, formData, {
-        headers: { 
-          Authorization: `Token ${user.token}`,
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      response = await method(url, formData);
       if (editing) {
         setBlogs(blogs.map(item => item.blg_id === selectedBlogId ? response.data : item));
       } else {
@@ -65,7 +57,7 @@ function Blog({ user }) {
   };
 
   const handleEdit = (blog) => {
-    setForm({ blg_title: blog.blg_title, blg_desc: blog.blg_desc, images: [] }); // Re-upload images for simplicity
+    setForm({ blg_title: blog.blg_title, blg_desc: blog.blg_desc, images: [] });
     setEditing(true);
     setSelectedBlogId(blog.blg_id);
   };
@@ -74,9 +66,7 @@ function Blog({ user }) {
     if (window.confirm('Are you sure you want to delete this blog?')) {
       setLoading(true);
       try {
-        await axios.delete(`http://localhost:8000/api/v1/blogs/${id}/`, {
-          headers: { Authorization: `Token ${user.token}` },
-        });
+        await api.delete(`blogs/${id}/`);
         setBlogs(blogs.filter(item => item.blg_id !== id));
         setError('');
       } catch (err) {
