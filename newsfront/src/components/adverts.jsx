@@ -13,7 +13,10 @@ function Advert({ user }) {
     setLoading(true);
     axios.get('http://localhost:8000/api/v1/adverts/', {
       headers: { Authorization: `Token ${user.token}` }
-    }).then(response => setAdverts(response.data))
+    }).then(response => {
+      console.log('Advert data on fetch:', response.data); // Debug: Check media array on every fetch
+      setAdverts(response.data);
+    })
       .catch(err => setError('Failed to fetch adverts.'))
       .finally(() => setLoading(false));
   }, [user.token]);
@@ -83,6 +86,24 @@ function Advert({ user }) {
     }
   };
 
+  // Function to determine media type and return appropriate tag
+  const renderMedia = (filePath) => {
+    const extension = filePath.split('.').pop().toLowerCase();
+    const src = `http://localhost:8000${filePath}`;
+
+    if (['jpg', 'jpeg', 'png', 'gif'].includes(extension)) {
+      return <img src={src} alt="Advert media" style={{ width: '50px', marginLeft: '10px' }} />;
+    } else if (['mp4', 'webm', 'ogg'].includes(extension)) {
+      return (
+        <video controls style={{ width: '50px', marginLeft: '10px' }}>
+          <source src={src} type={`video/${extension}`} />
+          Your browser does not support the video tag.
+        </video>
+      );
+    }
+    return null; // Unsupported type
+  };
+
   return (
     <div style={{ padding: '24px', backgroundColor: '#F9FAFB', minHeight: 'calc(100vh - 64px)' }}>
       <h2 style={{ fontSize: '24px', fontWeight: '600', color: '#1F2A44', marginBottom: '24px' }}>Advert Management</h2>
@@ -135,7 +156,7 @@ function Advert({ user }) {
             {adverts.map(advert => (
               <li key={advert.id} style={{ padding: '8px', marginBottom: '8px', backgroundColor: '#F9FAFB', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  {advert.ad_name} {advert.media && advert.media.length > 0 && advert.media[0].file && <img src={`/media/${advert.media[0].file}`} alt={advert.ad_name} style={{ width: '50px', marginLeft: '10px' }} />}
+                  {advert.ad_name} {advert.media && advert.media.length > 0 && renderMedia(advert.media[0].file)}
                 </div>
                 <div>
                   <button onClick={() => handleEdit(advert)} style={{ color: '#2563EB', border: 'none', background: 'none', cursor: 'pointer', marginRight: '10px' }}>Edit</button>

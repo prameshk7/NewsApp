@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Editor } from '@tinymce/tinymce-react';
 
 function News({ user, categories, types }) {
   const [news, setNews] = useState([]);
@@ -11,7 +12,10 @@ function News({ user, categories, types }) {
   useEffect(() => {
     setLoading(true);
     axios.get('http://localhost:8000/api/v1/news/', { headers: { Authorization: `Token ${user.token}` } })
-      .then(response => setNews(response.data))
+      .then(response => {
+        console.log('News data on fetch:', response.data); // Debug: Check image_files on every fetch
+        setNews(response.data);
+      })
       .catch(err => setError('Failed to fetch news.'))
       .finally(() => setLoading(false));
   }, [user.token]);
@@ -112,12 +116,17 @@ function News({ user, categories, types }) {
         </div>
         <div>
           <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>Description</label>
-          <textarea
+          <Editor
+            apiKey="178cv5oebxeklcxtalz2v56clmn1535pb5bz90723sykv0jf"
             value={form.desc}
-            onChange={(e) => setForm({ ...form, desc: e.target.value })}
-            style={{ width: '100%', padding: '8px', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '16px', resize: 'vertical', minHeight: '100px' }}
-            required
-            disabled={loading}
+            onEditorChange={(content) => setForm({ ...form, desc: content })}
+            init={{
+              height: 200,
+              menubar: false,
+              plugins: ['lists', 'link', 'image', 'code'],
+              toolbar:
+                'undo redo | bold italic underline | alignleft aligncenter alignright | bullist numlist outdent indent | removeformat',
+            }}
           />
         </div>
         <div>
@@ -161,7 +170,7 @@ function News({ user, categories, types }) {
           />
           {typeof form.image_files === 'string' && form.image_files && (
             <div style={{ marginTop: '8px' }}>
-              <img src={`/news_images/${form.image_files}`} alt="Current" style={{ width: '100px' }} />
+              <img src={form.image_files} alt="Current" style={{ width: '100px' }} />
               <p>Current image. Upload new to replace.</p>
             </div>
           )}
@@ -173,7 +182,7 @@ function News({ user, categories, types }) {
           onMouseOver={(e) => !loading && (e.target.style.backgroundColor = '#059669')}
           onMouseOut={(e) => !loading && (e.target.style.backgroundColor = '#10B981')}
         >
-          {loading ? (editing ? 'Updating...' : 'Adding...') : (editing ? 'Update News' : 'Add News')}
+          {loading ? (editing ? 'Updating...' : 'Adding...') : (editing ? 'Update News' : 'Update News')}
         </button>
       </form>
       <div style={{ marginTop: '24px', backgroundColor: '#FFFFFF', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}>
@@ -187,7 +196,7 @@ function News({ user, categories, types }) {
             {news.map(item => (
               <li key={item.id} style={{ padding: '8px', marginBottom: '8px', backgroundColor: '#F9FAFB', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  {item.title} {item.image_files && <img src={`/news_images/${item.image_files}`} alt={item.title} style={{ width: '50px', marginLeft: '10px' }} />}
+                  {item.title} {item.image_files && <img src={`http://localhost:8000${item.image_files}`} alt={item.title} style={{ width: '50px', marginLeft: '10px' }} />}
                 </div>
                 <div>
                   <button onClick={() => handleEdit(item)} style={{ color: '#2563EB', border: 'none', background: 'none', cursor: 'pointer', marginRight: '10px' }}>Edit</button>

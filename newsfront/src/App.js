@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'r
 import Login from './components/login';
 import PubNewsDashboard from './components/pubNewsDashboard';
 import axios from 'axios';
+import { Editor } from '@tinymce/tinymce-react';
 
 const AppContent = () => {
   const [user, setUser] = useState(null);
@@ -40,6 +41,8 @@ const AppContent = () => {
       )}
       <Route path="*" element={!user ? <Navigate to="/login" replace /> : <Navigate to="/dashboard/news" replace />} />
     </Routes>
+
+    
   );
 };
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import {Editor} from '@tinymce/tinymce-react';
 
 function Blog({ user }) {
   const [blogs, setBlogs] = useState([]);
@@ -13,7 +14,10 @@ function Blog({ user }) {
     setLoading(true);
     axios.get('http://localhost:8000/api/v1/blogs/', {
       headers: { Authorization: `Token ${user.token}` }
-    }).then(response => setBlogs(response.data))
+    }).then(response => {
+      console.log('Blog data on fetch:', response.data); // Debug: Check images array on every fetch
+      setBlogs(response.data);
+    })
       .catch(err => setError('Failed to fetch blogs.'))
       .finally(() => setLoading(false));
   }, [user.token]);
@@ -106,12 +110,17 @@ function Blog({ user }) {
         </div>
         <div>
           <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>Description</label>
-          <textarea
+          <Editor
+            apiKey="178cv5oebxeklcxtalz2v56clmn1535pb5bz90723sykv0jf"
             value={form.blg_desc}
-            onChange={(e) => setForm({ ...form, blg_desc: e.target.value })}
-            style={{ width: '100%', padding: '8px', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '16px', resize: 'vertical', minHeight: '100px' }}
-            required
-            disabled={loading}
+            onEditorChange={(content) => setForm({ ...form, blg_desc: content })}
+            init={{
+              height: 200,
+              menubar: false,
+              plugins: ['lists', 'link', 'image', 'code'],
+              toolbar:
+                'undo redo | bold italic underline | alignleft aligncenter alignright | bullist numlist outdent indent | removeformat',
+            }}
           />
         </div>
         <div>
@@ -146,7 +155,7 @@ function Blog({ user }) {
             {blogs.map(blog => (
               <li key={blog.blg_id} style={{ padding: '8px', marginBottom: '8px', backgroundColor: '#F9FAFB', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  {blog.blg_title} {blog.images && blog.images.length > 0 && blog.images[0].image && <img src={`/media/${blog.images[0].image}`} alt={blog.blg_title} style={{ width: '50px', marginLeft: '10px' }} />}
+                  {blog.blg_title} {blog.images && blog.images.length > 0 && blog.images[0].image && <img src={`http://localhost:8000${blog.images[0].image}`} alt={blog.blg_title} style={{ width: '50px', marginLeft: '10px' }} />}
                 </div>
                 <div>
                   <button onClick={() => handleEdit(blog)} style={{ color: '#2563EB', border: 'none', background: 'none', cursor: 'pointer', marginRight: '10px' }}>Edit</button>

@@ -7,7 +7,7 @@ class BlogImage(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.blog.blg_title} - {self.image.name}"
+        return f"{self.image.name}"
 
 class Blog(models.Model):
     blg_id = models.AutoField(primary_key=True)
@@ -18,3 +18,4 @@ class Blog(models.Model):
 
     def __str__(self):
         return self.blg_title
+    

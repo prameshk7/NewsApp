@@ -174,7 +174,7 @@ function User({ user }) {
             disabled={loading || !isEditing}
           />
           {profile.profile_image && typeof profile.profile_image === 'string' && (
-            <img src={`/media/${profile.profile_image}`} alt="Profile" style={{ width: '100px', marginTop: '8px' }} />
+            <img src={`http://localhost:8000${profile.profile_image}`} alt="Profile" style={{ width: '100px', marginTop: '8px' }} />
           )}
         </div>
         {isEditing ? (
