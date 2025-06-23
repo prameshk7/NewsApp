@@ -20,6 +20,7 @@ const AppContent = () => {
       api.get('profile/')
         .then(response => {
           setUser({ ...response.data, token });
+          localStorage.setItem('username', response.data.username);
           // Fetch categories and types
           Promise.all([
             api.get('categories/'),
