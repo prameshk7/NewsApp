@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { Editor } from '@tinymce/tinymce-react';
 import api from '../utils/axiosConfig';
 
