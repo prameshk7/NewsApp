@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User
+from .models import User,Comment
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
@@ -52,4 +52,15 @@ class UserSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
     
-    
+class CommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = ['id', 'username', 'comment_content', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+    def validate(self, data):
+        if not data.get('username').strip():
+            raise serializers.ValidationError({"username": "Username cannot be empty."})
+        if not data.get('comment_content').strip():
+            raise serializers.ValidationError({"comment_content": "Comment content cannot be empty."})
+        return data

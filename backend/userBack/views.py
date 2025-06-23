@@ -2,8 +2,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated, BasePermission
-from .models import User, OTP
-from .serializers import UserSerializer
+from .models import User, OTP,Comment
+from .serializers import UserSerializer,CommentSerializer
 from django.contrib.auth import authenticate
 from django.core.exceptions import PermissionDenied
 from django.core.mail import send_mail
@@ -151,4 +151,47 @@ class ResetPasswordView(APIView):
         except User.DoesNotExist:
             return Response({'error': 'No user found with this email.'}, status=status.HTTP_404_NOT_FOUND)
         
+class CommentListView(APIView):
+    def get(self, request):
+        comments = Comment.objects.all()
+        serializer = CommentSerializer(comments, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = CommentSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class CommentDetailView(APIView):
+    def get_object(self, pk):
+        try:
+            return Comment.objects.get(pk=pk)
+        except Comment.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        comment = self.get_object(pk)
+        if not comment:
+            return Response({"error": "Comment not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = CommentSerializer(comment)
+        return Response(serializer.data)
+
+    def put(self, request, pk):
+        comment = self.get_object(pk)
+        if not comment:
+            return Response({"error": "Comment not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = CommentSerializer(comment, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        comment = self.get_object(pk)
+        if not comment:
+            return Response({"error": "Comment not found."}, status=status.HTTP_404_NOT_FOUND)
+        comment.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
         

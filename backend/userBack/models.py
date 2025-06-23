@@ -39,3 +39,14 @@ class OTP(models.Model):
     def __str__(self):
         return f"OTP {self.code} for {self.user.username}"    
 
+class Comment(models.Model):
+    username = models.CharField(max_length=150, blank=False)
+    comment_content = models.TextField(blank=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.username} - {self.created_at}"
+
+    class Meta:
+        ordering = ['-created_at']
+        
