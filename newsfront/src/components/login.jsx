@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
 import api from '../utils/axiosConfig';
+import ForgotPassword from './forgotPassword';
 
 function Login({ setUser, navigate }) {
   const [credentials, setCredentials] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const fetchProfile = async (token) => {
     try {
       const response = await api.get('profile/');
-      console.log('Profile response:', response.data);
       setUser(response.data);
     } catch (err) {
-      console.error('Failed to fetch profile:', err.response?.data || err.message);
       setError('Failed to load user profile. Please try again.');
     }
   };
@@ -29,15 +29,14 @@ function Login({ setUser, navigate }) {
       const response = await api.post('login/', credentials);
       const { token, message } = response.data;
       if (!token || message !== 'Login successful') {
-        throw new Error('Invalid login response: token or message missing/incorrect');
+        throw new Error('Invalid login response');
       }
       localStorage.setItem('token', token);
       localStorage.setItem('username', credentials.username);
       await fetchProfile(token);
       navigate('/dashboard/news');
     } catch (err) {
-      const errorMsg = err.response?.data?.error || err.response?.data?.message || 'Login failed. Please check your credentials.';
-      setError(errorMsg);
+      setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
@@ -150,7 +149,28 @@ function Login({ setUser, navigate }) {
           >
             {loading ? 'Logging in...' : 'Login'}
           </button>
+          <div style={{ textAlign: 'center' }}>
+            <button
+              type="button"
+              onClick={() => setShowForgotPassword(true)}
+              style={{
+                color: '#1F2A44',
+                background: 'none',
+                border: 'none',
+                fontSize: '14px',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+              }}
+            >
+              Forgot Password?
+            </button>
+          </div>
         </form>
+        <ForgotPassword
+          isOpen={showForgotPassword}
+          onClose={() => setShowForgotPassword(false)}
+          navigate={navigate}
+        />
       </div>
     </div>
   );

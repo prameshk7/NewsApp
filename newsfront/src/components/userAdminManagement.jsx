@@ -8,10 +8,10 @@ function UserAdminManagement({ user }) {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
 
   useEffect(() => {
-    console.log('User in UserAdminManagement:', user);
-    if (!user || !user.is_staff || user.is_superuser) {
+    if (!user?.is_staff || user?.is_superuser) {
       setError('You do not have permission to manage users.');
       return;
     }
@@ -20,7 +20,23 @@ function UserAdminManagement({ user }) {
       .then(response => setUsers(response.data))
       .catch(err => setError('Failed to fetch users.'))
       .finally(() => setLoading(false));
-  }, [user?.token, user?.is_staff, user?.is_superuser]);
+  }, [user]);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!['jpg', 'jpeg', 'png'].includes(file.name.split('.').pop().toLowerCase())) {
+        setError('Unsupported file type. Use JPG, JPEG, or PNG.');
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        setError('File size exceeds 2MB limit.');
+        return;
+      }
+      setForm({ ...form, profile_image: file });
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,7 +44,7 @@ function UserAdminManagement({ user }) {
       setError('You do not have permission to perform this action.');
       return;
     }
-    if (!form.username || !form.firstname || !form.lastname || !form.email || !form.password) {
+    if (!form.username || !form.firstname || !form.lastname || !form.email || (!editing && !form.password)) {
       setError('All fields are required.');
       return;
     }
@@ -38,7 +54,7 @@ function UserAdminManagement({ user }) {
     formData.append('firstname', form.firstname);
     formData.append('lastname', form.lastname);
     formData.append('email', form.email);
-    formData.append('password', form.password);
+    if (form.password) formData.append('password', form.password);
     if (form.profile_image) formData.append('profile_image', form.profile_image);
 
     try {
@@ -46,6 +62,7 @@ function UserAdminManagement({ user }) {
         method: editing ? 'put' : 'post',
         url: editing ? `profile/${selectedUserId}/` : 'register/',
         data: formData,
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
       const updatedUser = response.data;
       if (editing) {
@@ -54,6 +71,7 @@ function UserAdminManagement({ user }) {
         setUsers([...users, updatedUser]);
       }
       setForm({ username: '', firstname: '', lastname: '', email: '', password: '', profile_image: null });
+      setImagePreview(null);
       setEditing(false);
       setSelectedUserId(null);
       setError('');
@@ -65,23 +83,35 @@ function UserAdminManagement({ user }) {
     }
   };
 
-  const handleEdit = (user) => {
-    if (user.is_staff || user.created_by !== user.id) {
+  const handleEdit = (u) => {
+    if (u.is_staff || u.created_by !== user.id) {
       setError('You cannot edit this user.');
       return;
     }
-    setForm({ username: user.username, firstname: user.firstname, lastname: user.lastname, email: user.email, password: '', profile_image: null });
+    setForm({
+      username: u.username,
+      firstname: u.firstname,
+      lastname: u.lastname,
+      email: u.email,
+      password: '',
+      profile_image: null,
+    });
+    setImagePreview(u.profile_image ? `http://localhost:8000${u.profile_image}` : null);
     setEditing(true);
-    setSelectedUserId(user.id);
+    setSelectedUserId(u.id);
   };
 
   const handleDelete = async (id) => {
-    if (!user.is_staff || user.is_superuser || window.confirm('Are you sure you want to delete this user?')) {
-      const userToDelete = users.find(u => u.id === id);
-      if (userToDelete && (userToDelete.is_staff || userToDelete.created_by !== user.id)) {
-        setError('You cannot delete this user.');
-        return;
-      }
+    if (!user?.is_staff || user?.is_superuser) {
+      setError('You do not have permission to perform this action.');
+      return;
+    }
+    const userToDelete = users.find(u => u.id === id);
+    if (userToDelete.is_staff || userToDelete.created_by !== user.id) {
+      setError('You cannot delete this user.');
+      return;
+    }
+    if (window.confirm('Are you sure you want to delete this user?')) {
       setLoading(true);
       try {
         await api.delete(`profile/${id}/`);
@@ -160,6 +190,7 @@ function UserAdminManagement({ user }) {
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
             style={{ width: '100%', padding: '8px', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '16px' }}
+            placeholder={editing ? 'Leave blank to keep unchanged' : ''}
             required={!editing}
             disabled={loading}
           />
@@ -169,14 +200,26 @@ function UserAdminManagement({ user }) {
           <input
             type="file"
             accept="image/*"
-            onChange={(e) => setForm({ ...form, profile_image: e.target.files[0] })}
+            onChange={handleFileChange}
             style={{ width: '100%', padding: '8px', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '16px' }}
             disabled={loading}
           />
+          {imagePreview && (
+            <img src={imagePreview} alt="Preview" style={{ width: '100px', height: '100px', objectFit: 'cover', marginTop: '10px' }} />
+          )}
         </div>
         <button
           type="submit"
-          style={{ padding: '10px', backgroundColor: '#10B981', color: '#FFFFFF', border: 'none', borderRadius: '4px', cursor: loading ? 'not-allowed' : 'pointer', fontSize: '16px', transition: 'background-color 0.3s ease' }}
+          style={{
+            padding: '10px',
+            backgroundColor: '#10B981',
+            color: '#FFFFFF',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            fontSize: '16px',
+            transition: 'background-color 0.3s ease',
+          }}
           disabled={loading}
           onMouseOver={(e) => !loading && (e.target.style.backgroundColor = '#059669')}
           onMouseOut={(e) => !loading && (e.target.style.backgroundColor = '#10B981')}
@@ -185,19 +228,49 @@ function UserAdminManagement({ user }) {
         </button>
       </form>
       <div style={{ marginTop: '24px', backgroundColor: '#FFFFFF', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}>
-        <h3 style={{ fontSize: '20px', fontWeight: '600', color: '#1F2A44', marginBottom: '16px' }}>Staff Users</h3>
+        <h3 style={{ fontSize: '20px', fontWeight: '600', color: '#1F2A44', marginBottom: '16px' }}>Normal Users</h3>
         {loading ? (
           <p style={{ color: '#374151' }}>Loading...</p>
         ) : users.length === 0 ? (
-          <p style={{ color: '#374151' }}>No staff users available.</p>
+          <p style={{ color: '#374151' }}>No users available.</p>
         ) : (
           <ul style={{ listStyle: 'none', padding: 0 }}>
             {users.map(u => (
-              <li key={u.id} style={{ padding: '8px', marginBottom: '8px', backgroundColor: '#F9FAFB', borderRadius: '4px', display: 'flex', justifyContent: 'space-between' }}>
-                {u.username} ({u.firstname} {u.lastname})
+              <li
+                key={u.id}
+                style={{
+                  padding: '8px',
+                  marginBottom: '8px',
+                  backgroundColor: '#F9FAFB',
+                  borderRadius: '4px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
                 <div>
-                  <button onClick={() => handleEdit(u)} style={{ color: '#2563EB', border: 'none', background: 'none', cursor: 'pointer', marginRight: '10px' }}>Edit</button>
-                  <button onClick={() => handleDelete(u.id)} style={{ color: '#DC2626', border: 'none', background: 'none', cursor: 'pointer' }}>Delete</button>
+                  {u.username} ({u.firstname} {u.lastname})
+                  {u.profile_image && (
+                    <img
+                      src={`http://localhost:8000${u.profile_image}`}
+                      alt={`${u.username}'s profile`}
+                      style={{ width: '50px', height: '50px', objectFit: 'cover', marginLeft: '10px' }}
+                    />
+                  )}
+                </div>
+                <div>
+                  <button
+                    onClick={() => handleEdit(u)}
+                    style={{ color: '#2563EB', border: 'none', background: 'none', cursor: 'pointer', marginRight: '10px' }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(u.id)}
+                    style={{ color: '#DC2626', border: 'none', background: 'none', cursor: 'pointer' }}
+                  >
+                    Delete
+                  </button>
                 </div>
               </li>
             ))}

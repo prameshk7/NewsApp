@@ -105,15 +105,11 @@ class VideoListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        if not request.user.is_staff and not request.user.is_superuser:
-            return Response({"error": "Only managers can view videos."}, status=status.HTTP_403_FORBIDDEN)
-        videos = Video.objects.filter(created_by=request.user)
+        videos = Video.objects.filter()
         serializer = VideoSerializer(videos, many=True)
         return Response(serializer.data)
 
     def post(self, request):
-        if not request.user.is_staff and not request.user.is_superuser:
-            return Response({"error": "Only managers can create videos."}, status=status.HTTP_403_FORBIDDEN)
         serializer = VideoSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
@@ -125,14 +121,12 @@ class VideoDetailView(APIView):
 
     def get_object(self, pk):
         try:
-            video = Video.objects.get(pk=pk, created_by=self.request.user)
+            video = Video.objects.get(pk=pk)
             return video
         except Video.DoesNotExist:
             return None
 
     def get(self, request, pk):
-        if not request.user.is_staff and not request.user.is_superuser:
-            return Response({"error": "Only managers can view videos."}, status=status.HTTP_403_FORBIDDEN)
         video = self.get_object(pk)
         if not video:
             return Response({"error": "Video not found or not authorized."}, status=status.HTTP_404_NOT_FOUND)
@@ -140,8 +134,6 @@ class VideoDetailView(APIView):
         return Response(serializer.data)
 
     def put(self, request, pk):
-        if not request.user.is_staff and not request.user.is_superuser:
-            return Response({"error": "Only managers can update videos."}, status=status.HTTP_403_FORBIDDEN)
         video = self.get_object(pk)
         if not video:
             return Response({"error": "Video not found or not authorized."}, status=status.HTTP_404_NOT_FOUND)
@@ -152,8 +144,6 @@ class VideoDetailView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
-        if not request.user.is_staff and not request.user.is_superuser:
-            return Response({"error": "Only managers can delete videos."}, status=status.HTTP_403_FORBIDDEN)
         video = self.get_object(pk)
         if not video:
             return Response({"error": "Video not found or not authorized."}, status=status.HTTP_404_NOT_FOUND)

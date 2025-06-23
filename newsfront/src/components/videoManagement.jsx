@@ -10,7 +10,7 @@ function VideoManagement({ user }) {
   const [selectedVideoId, setSelectedVideoId] = useState(null);
 
   useEffect(() => {
-    if (!user || !user.is_staff || user.is_superuser) {
+    if (!user) {
       setError('You do not have permission to manage videos.');
       return;
     }
@@ -19,14 +19,10 @@ function VideoManagement({ user }) {
       .then(response => setVideos(response.data))
       .catch(err => setError('Failed to fetch videos.'))
       .finally(() => setLoading(false));
-  }, [user?.token, user?.is_staff, user?.is_superuser]);
+  }, [user?.token, user?.is_superuser]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!user?.is_staff || user?.is_superuser) {
-      setError('You do not have permission to perform this action.');
-      return;
-    }
     if (!form.video_url) {
       setError('Video URL is required.');
       return;
@@ -88,9 +84,6 @@ function VideoManagement({ user }) {
     }
   };
 
-  if (!user?.is_staff || user?.is_superuser) {
-    return <div style={{ padding: '24px', color: '#DC2626' }}>Access Denied: Only managers can manage videos.</div>;
-  }
 
   return (
     <div style={{ padding: '24px', backgroundColor: '#F9FAFB', minHeight: 'calc(100vh - 64px)' }}>

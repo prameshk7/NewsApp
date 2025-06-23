@@ -1,50 +1,106 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import Login from './components/login';
+import Login from './components/login'; 
 import PubNewsDashboard from './components/pubNewsDashboard';
-import axios from 'axios';
+import api from './utils/axiosConfig';
 
 const AppContent = () => {
   const [user, setUser] = useState(null);
   const [categories, setCategories] = useState([]);
   const [types, setTypes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     const username = localStorage.getItem('username');
     if (token && username) {
-      setUser({ username, token });
-      // Initial fetch of categories and types
-      axios.get('http://localhost:8000/api/v1/categories/', { headers: { Authorization: `Token ${token}` } })
-        .then(response => setCategories(response.data))
-        .catch(err => console.error('Failed to fetch categories:', err));
-      axios.get('http://localhost:8000/api/v1/types/', { headers: { Authorization: `Token ${token}` } })
-        .then(response => setTypes(response.data))
-        .catch(err => console.error('Failed to fetch types:', err));
+      // Validate token by fetching user profile
+      api.get('profile/')
+        .then(response => {
+          setUser({ ...response.data, token });
+          // Fetch categories and types
+          Promise.all([
+            api.get('categories/'),
+            api.get('types/'),
+          ])
+            .then(([categoriesResponse, typesResponse]) => {
+              setCategories(categoriesResponse.data);
+              setTypes(typesResponse.data);
+            })
+            .catch(err => {
+              console.error('Failed to fetch categories/types:', err);
+              setError('Failed to load app data. Please try again.');
+            })
+            .finally(() => setLoading(false));
+        })
+        .catch(err => {
+          console.error('Invalid token:', err);
+          localStorage.removeItem('token');
+          localStorage.removeItem('username');
+          setUser(null);
+          setLoading(false);
+          navigate('/login');
+        });
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
-  }, []);
+  }, [navigate]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+    setUser(null);
+    setCategories([]);
+    setTypes([]);
+    navigate('/login');
+  };
 
   if (loading) {
-    return <div>Loading...</div>; // Simple loading indicator
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        Loading...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: '#DC2626' }}>
+        {error}
+      </div>
+    );
   }
 
   return (
     <Routes>
-      {!user ? (
-        <Route path="/login" element={<Login setUser={setUser} navigate={navigate} />} />
-      ) : (
-        <Route path="/dashboard/*" element={<PubNewsDashboard user={user} categories={categories} types={types} setCategories={setCategories} setTypes={setTypes} setUser={setUser} />} />
-      )}
-      <Route path="*" element={!user ? <Navigate to="/login" replace /> : <Navigate to="/dashboard/news" replace />} />
+      <Route
+        path="/login"
+        element={user ? <Navigate to="/dashboard/news" replace /> : <Login setUser={setUser} navigate={navigate} />}
+      />
+      <Route
+        path="/dashboard/*"
+        element={
+          user ? (
+            <PubNewsDashboard
+              user={user}
+              categories={categories}
+              types={types}
+              setCategories={setCategories}
+              setTypes={setTypes}
+              setUser={setUser}
+              handleLogout={handleLogout}
+            />
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
+      />
+      <Route path="*" element={<Navigate to={user ? '/dashboard/news' : '/login'} replace />} />
     </Routes>
-
-    
   );
 };
-
 
 const App = () => {
   return (

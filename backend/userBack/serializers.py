@@ -4,28 +4,26 @@ from .models import User
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'firstname', 'lastname', 'email', 'password', 'profile_image', 'created_by', 'is_staff', 'is_superuser']
+        fields = ['id', 'username', 'firstname', 'lastname', 'email', 'password', 'profile_image', 'created_by', 'created_at', 'is_staff', 'is_superuser']
         extra_kwargs = {
             'password': {'write_only': True},
-            'username': {'read_only': True},
             'created_by': {'read_only': True},
-            'is_staff': {'read_only': True},  # Controlled by the view or admin
+            'is_staff': {'read_only': True},  # Controlled by view/admin
             'is_superuser': {'read_only': True},
         }
 
     def create(self, validated_data):
-        # Allow is_staff to be set by the view or admin, default to False if not provided
-        is_staff = validated_data.get('is_staff', False)
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data['email'],
             password=validated_data['password'],
             firstname=validated_data['firstname'],
             lastname=validated_data['lastname'],
-            is_staff=is_staff
+            is_staff=False  # Ensure normal users
         )
-        if 'created_by' in self.context:
-            user.created_by = self.context['created_by']
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            user.created_by = request.user
             user.save()
         return user
 
@@ -35,6 +33,8 @@ class UserSerializer(serializers.ModelSerializer):
         instance.email = validated_data.get('email', instance.email)
         if 'profile_image' in validated_data:
             instance.profile_image = validated_data['profile_image']
+        if 'password' in validated_data:
+            instance.set_password(validated_data['password'])
         instance.save()
         return instance
     

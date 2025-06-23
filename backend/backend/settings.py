@@ -149,6 +149,14 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Media settings
-MEDIA_URL = '/media/'  # Changed to a more generic prefix
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Root for all media, including advert_media
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# settings.py
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'pramesh.youthit@gmail.com'  
+EMAIL_HOST_PASSWORD = 'lgeo pvxy tncd zxgj' 
 

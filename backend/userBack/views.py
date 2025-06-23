@@ -2,18 +2,17 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated, BasePermission
-from .models import User
+from .models import User, OTP
 from .serializers import UserSerializer
 from django.contrib.auth import authenticate
 from django.core.exceptions import PermissionDenied
+from django.core.mail import send_mail
+from django.utils import timezone
+from rest_framework import status
 
 class IsManagerUser(BasePermission):
     def has_permission(self, request, view):
-        if not request.user.is_authenticated:
-            return False
-        if view.__class__.__name__ == 'UserRegistrationView':
-            return request.user.is_staff and not request.user.is_superuser
-        return True
+        return request.user.is_authenticated and request.user.is_staff and not request.user.is_superuser
 
 class IsSelfOrManager(BasePermission):
     def has_permission(self, request, view):
@@ -21,33 +20,31 @@ class IsSelfOrManager(BasePermission):
             return False
         if hasattr(view, 'kwargs') and 'pk' in view.kwargs:
             pk = view.kwargs['pk']
-            return request.user.id == int(pk) or (request.user.is_staff and not request.user.is_superuser)
+            try:
+                user = User.objects.get(pk=pk)
+                return request.user.id == int(pk) or (request.user.is_staff and not request.user.is_superuser and user.created_by == request.user)
+            except User.DoesNotExist:
+                return False
         return True
 
 class UserRegistrationView(APIView):
     permission_classes = [IsAuthenticated, IsManagerUser]
 
     def post(self, request):
-        if not request.user.is_staff or request.user.is_superuser:
-            raise PermissionDenied("Only managers can create staff users.")
-        # Default to is_staff=False for staff users created by managers
-        data = request.data.copy()
-        data['is_staff'] = False  # Ensure staff users are not managers
-        serializer = UserSerializer(data=data, context={'created_by': request.user})
+        serializer = UserSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             user = serializer.save()
             token, _ = Token.objects.get_or_create(user=user)
-            return Response({'token': token.key, 'message': 'Staff user created successfully'}, status=201)
+            return Response({'token': token.key, 'message': 'User created successfully'}, status=201)
         return Response(serializer.errors, status=400)
 
 class UserLoginView(APIView):
     def post(self, request):
         username = request.data.get('username')
         password = request.data.get('password')
-        print(f"Attempting login with username: {username}, password: {password}")
         user = authenticate(request, username=username, password=password)
-        if user is not None:
-            token, created = Token.objects.get_or_create(user=user)
+        if user:
+            token, _ = Token.objects.get_or_create(user=user)
             return Response({'token': token.key, 'message': 'Login successful'})
         return Response({'error': 'Invalid username or password'}, status=401)
 
@@ -56,7 +53,6 @@ class UserProfileView(APIView):
 
     def get(self, request):
         serializer = UserSerializer(request.user)
-        print(f"User profile data: {serializer.data}")  # Debug log
         return Response(serializer.data)
 
     def put(self, request):
@@ -75,15 +71,11 @@ class ManagerUserProfileView(APIView):
 
     def get(self, request, pk):
         user = User.objects.get(pk=pk)
-        if request.user.id != user.pk and not (request.user.is_staff and not request.user.is_superuser):
-            raise PermissionDenied("You do not have permission to view this user's profile.")
         serializer = UserSerializer(user)
         return Response(serializer.data)
 
     def put(self, request, pk):
         user = User.objects.get(pk=pk)
-        if request.user.id != user.pk and not (request.user.is_staff and not request.user.is_superuser):
-            raise PermissionDenied("You do not have permission to update this user's profile.")
         serializer = UserSerializer(user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -92,8 +84,6 @@ class ManagerUserProfileView(APIView):
 
     def delete(self, request, pk):
         user = User.objects.get(pk=pk)
-        if request.user.id != user.pk and not (request.user.is_staff and not request.user.is_superuser):
-            raise PermissionDenied("You do not have permission to delete this user's profile.")
         user.delete()
         return Response(status=204)
 
@@ -101,11 +91,64 @@ class UserListView(APIView):
     permission_classes = [IsAuthenticated, IsManagerUser]
 
     def get(self, request):
-        if request.user.is_staff and not request.user.is_superuser:
-            users = User.objects.all().exclude(is_superuser=True)
-        else:
-            users = User.objects.filter(id=request.user.id)
+        users = User.objects.filter(created_by=request.user, is_staff=False)
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data)
-    
-    
+
+class ForgotPasswordRequestView(APIView):
+    def post(self, request):
+        email = request.data.get('email')
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({'error': 'No user found with this email.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Invalidate previous OTPs
+        OTP.objects.filter(user=user, is_used=False).update(is_used=True)
+
+        # Create new OTP
+        otp = OTP.objects.create(user=user)
+        subject = 'Password Reset OTP'
+        message = f'Your OTP for password reset is: {otp.code}\nThis OTP is valid for 10 minutes.'
+        from_email = 'News App <your-email@gmail.com>'
+        try:
+            send_mail(subject, message, from_email, [user.email], fail_silently=False)
+        except Exception as e:
+            return Response({'error': f'Failed to send email: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({'message': 'OTP sent to your email.'}, status=status.HTTP_200_OK)
+
+class VerifyOTPView(APIView):
+    def post(self, request):
+        email = request.data.get('email')
+        code = request.data.get('code')
+        try:
+            user = User.objects.get(email=email)
+            otp = OTP.objects.filter(user=user, code=code, is_used=False).first()
+            if not otp:
+                return Response({'error': 'Invalid OTP.'}, status=status.HTTP_400_BAD_REQUEST)
+            if not otp.is_valid():
+                return Response({'error': 'OTP has expired.'}, status=status.HTTP_400_BAD_REQUEST)
+            otp.is_used = True
+            otp.save()
+            return Response({'message': 'OTP verified successfully.', 'email': email}, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({'error': 'No user found with this email.'}, status=status.HTTP_404_NOT_FOUND)
+
+class ResetPasswordView(APIView):
+    def post(self, request):
+        email = request.data.get('email')
+        password = request.data.get('password')
+        try:
+            user = User.objects.get(email=email)
+            # Verify that a valid OTP was recently used
+            otp = OTP.objects.filter(user=user, is_used=True, expires_at__gte=timezone.now() - timezone.timedelta(minutes=10)).first()
+            if not otp:
+                return Response({'error': 'No valid OTP verification found. Please request a new OTP.'}, status=status.HTTP_400_BAD_REQUEST)
+            user.set_password(password)
+            user.save()
+            return Response({'message': 'Password reset successfully.'}, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({'error': 'No user found with this email.'}, status=status.HTTP_404_NOT_FOUND)
+        
+        
