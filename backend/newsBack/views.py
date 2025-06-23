@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
 from .models import News, Category, Type, Video
 from .serializers import NewsSerializer, CategorySerializer, TypeSerializer, VideoSerializer
 
@@ -16,68 +17,41 @@ class CategoryListCreateView(APIView):
         serializer = CategorySerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(created_by=request.user)
-            return Response(serializer.data, status=201)
-        return Response(serializer.errors, status=400)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
-class VideoListCreateView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        if not request.user.is_staff or request.user.is_superuser:
-            return Response({"error": "Only managers can view videos."}, status=403)
-        videos = Video.objects.filter(created_by=request.user)
-        serializer = VideoSerializer(videos, many=True)
-        return Response(serializer.data)
-
-    def post(self, request):
-        if not request.user.is_staff or request.user.is_superuser:
-            return Response({"error": "Only managers can create videos."}, status=403)
-        serializer = VideoSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=201)
-        return Response(serializer.errors, status=400)
-
-class VideoDetailView(APIView):
+class CategoryRetrieveUpdateDestroyView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get_object(self, pk):
         try:
-            video = Video.objects.get(pk=pk, created_by=self.request.user)
-            return video
-        except Video.DoesNotExist:
+            return Category.objects.get(pk=pk)
+        except Category.DoesNotExist:
             return None
 
     def get(self, request, pk):
-        if not request.user.is_staff or request.user.is_superuser:
-            return Response({"error": "Only managers can view videos."}, status=403)
-        video = self.get_object(pk)
-        if video is None:
-            return Response({"error": "Video not found or not authorized."}, status=404)
-        serializer = VideoSerializer(video)
+        category = self.get_object(pk)
+        if not category:
+            return Response({'error': 'Category not found'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = CategorySerializer(category)
         return Response(serializer.data)
 
     def put(self, request, pk):
-        if not request.user.is_staff or request.user.is_superuser:
-            return Response({"error": "Only managers can update videos."}, status=403)
-        video = self.get_object(pk)
-        if video is None:
-            return Response({"error": "Video not found or not authorized."}, status=404)
-        serializer = VideoSerializer(video, data=request.data, context={'request': request})
+        category = self.get_object(pk)
+        if not category:
+            return Response({'error': 'Category not found'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = CategorySerializer(category, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        return Response(serializer.errors, status=400)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
-        if not request.user.is_staff or request.user.is_superuser:
-            return Response({"error": "Only managers can delete videos."}, status=403)
-        video = self.get_object(pk)
-        if video is None:
-            return Response({"error": "Video not found or not authorized."}, status=404)
-        video.delete()
-        return Response({"message": "Video deleted successfully."}, status=204)
+        category = self.get_object(pk)
+        if not category:
+            return Response({'error': 'Category not found'}, status=status.HTTP_404_NOT_FOUND)
+        category.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 class TypeListCreateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -91,50 +65,100 @@ class TypeListCreateView(APIView):
         serializer = TypeSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(created_by=request.user)
-            return Response(serializer.data, status=201)
-        return Response(serializer.errors, status=400)
-
-class CategoryRetrieveUpdateDestroyView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, pk):
-        category = Category.objects.get(pk=pk)
-        serializer = CategorySerializer(category)
-        return Response(serializer.data)
-
-    def put(self, request, pk):
-        category = Category.objects.get(pk=pk)
-        serializer = CategorySerializer(category, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=400)
-
-    def delete(self, request, pk):
-        category = Category.objects.get(pk=pk)
-        category.delete()
-        return Response(status=204)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class TypeRetrieveUpdateDestroyView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def get_object(self, pk):
+        try:
+            return Type.objects.get(pk=pk)
+        except Type.DoesNotExist:
+            return None
+
     def get(self, request, pk):
-        type_obj = Type.objects.get(pk=pk)
+        type_obj = self.get_object(pk)
+        if not type_obj:
+            return Response({'error': 'Type not found'}, status=status.HTTP_404_NOT_FOUND)
         serializer = TypeSerializer(type_obj)
         return Response(serializer.data)
 
     def put(self, request, pk):
-        type_obj = Type.objects.get(pk=pk)
+        type_obj = self.get_object(pk)
+        if not type_obj:
+            return Response({'error': 'Type not found'}, status=status.HTTP_404_NOT_FOUND)
         serializer = TypeSerializer(type_obj, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        return Response(serializer.errors, status=400)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
-        type_obj = Type.objects.get(pk=pk)
+        type_obj = self.get_object(pk)
+        if not type_obj:
+            return Response({'error': 'Type not found'}, status=status.HTTP_404_NOT_FOUND)
         type_obj.delete()
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class VideoListCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not request.user.is_staff and not request.user.is_superuser:
+            return Response({"error": "Only managers can view videos."}, status=status.HTTP_403_FORBIDDEN)
+        videos = Video.objects.filter(created_by=request.user)
+        serializer = VideoSerializer(videos, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        if not request.user.is_staff and not request.user.is_superuser:
+            return Response({"error": "Only managers can create videos."}, status=status.HTTP_403_FORBIDDEN)
+        serializer = VideoSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class VideoDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self, pk):
+        try:
+            video = Video.objects.get(pk=pk, created_by=self.request.user)
+            return video
+        except Video.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        if not request.user.is_staff and not request.user.is_superuser:
+            return Response({"error": "Only managers can view videos."}, status=status.HTTP_403_FORBIDDEN)
+        video = self.get_object(pk)
+        if not video:
+            return Response({"error": "Video not found or not authorized."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = VideoSerializer(video)
+        return Response(serializer.data)
+
+    def put(self, request, pk):
+        if not request.user.is_staff and not request.user.is_superuser:
+            return Response({"error": "Only managers can update videos."}, status=status.HTTP_403_FORBIDDEN)
+        video = self.get_object(pk)
+        if not video:
+            return Response({"error": "Video not found or not authorized."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = VideoSerializer(video, data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        if not request.user.is_staff and not request.user.is_superuser:
+            return Response({"error": "Only managers can delete videos."}, status=status.HTTP_403_FORBIDDEN)
+        video = self.get_object(pk)
+        if not video:
+            return Response({"error": "Video not found or not authorized."}, status=status.HTTP_404_NOT_FOUND)
+        video.delete()
+        return Response({"message": "Video deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
 
 class NewsListCreateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -148,28 +172,40 @@ class NewsListCreateView(APIView):
         serializer = NewsSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save(created_by=request.user)
-            return Response(serializer.data, status=201)
-        return Response(serializer.errors, status=400)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class NewsRetrieveUpdateDestroyView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def get_object(self, pk):
+        try:
+            return News.objects.get(pk=pk)
+        except News.DoesNotExist:
+            return None
+
     def get(self, request, pk):
-        news = News.objects.get(pk=pk)
+        news = self.get_object(pk)
+        if not news:
+            return Response({'error': 'News not found'}, status=status.HTTP_404_NOT_FOUND)
         serializer = NewsSerializer(news)
         return Response(serializer.data)
 
     def put(self, request, pk):
-        news = News.objects.get(pk=pk)
+        news = self.get_object(pk)
+        if not news:
+            return Response({'error': 'News not found'}, status=status.HTTP_404_NOT_FOUND)
         serializer = NewsSerializer(news, data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        return Response(serializer.errors, status=400)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
-        news = News.objects.get(pk=pk)
+        news = self.get_object(pk)
+        if not news:
+            return Response({'error': 'News not found'}, status=status.HTTP_404_NOT_FOUND)
         news.delete()
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
     
     
