@@ -7,28 +7,29 @@ class BlogImageSerializer(serializers.ModelSerializer):
         fields = ['id', 'image', 'uploaded_at']
 
 class BlogSerializer(serializers.ModelSerializer):
-    images = BlogImageSerializer(many=True, required=False)
+    images = BlogImageSerializer(many=True, required=False, read_only=True)
+    media_files = serializers.ListField(child=serializers.FileField(), write_only=True, required=False)
 
     class Meta:
         model = Blog
-        fields = ['blg_id', 'blg_title', 'blg_desc', 'created_at', 'created_by', 'images']
+        fields = ['blg_id', 'blg_title', 'blg_desc', 'created_at', 'created_by', 'images', 'media_files']
 
     def create(self, validated_data):
-        image_data = validated_data.pop('images', [])
+        media_files = validated_data.pop('media_files', [])
         blog = Blog.objects.create(created_by=self.context['request'].user, **validated_data)
-        for image_item in image_data:
-            BlogImage.objects.create(blog=blog, **image_item)
+        for file in media_files:
+            BlogImage.objects.create(blog=blog, image=file)
         return blog
 
     def update(self, instance, validated_data):
-        image_data = validated_data.pop('images', [])
+        media_files = validated_data.pop('media_files', [])
         instance.blg_title = validated_data.get('blg_title', instance.blg_title)
         instance.blg_desc = validated_data.get('blg_desc', instance.blg_desc)
         instance.save()
-        if image_data:
-            instance.images.all().delete()  # Optional: Replace existing images
-            for image_item in image_data:
-                BlogImage.objects.create(blog=instance, **image_item)
+        if media_files:
+            instance.images.all().delete()  # Replace existing media (optional)
+            for file in media_files:
+                BlogImage.objects.create(blog=instance, image=file)
         return instance
     
     
