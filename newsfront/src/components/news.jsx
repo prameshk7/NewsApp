@@ -277,6 +277,7 @@ function News({ user, categories, types }) {
                   <th style={{ padding: '8px', borderBottom: '2px solid #D1D5DB' }}><input type="checkbox" onChange={(e) => setSelectedIds(e.target.checked ? new Set(paginatedNews.map(item => item.id)) : new Set())} /></th>
                   <th style={{ padding: '8px', borderBottom: '2px solid #D1D5DB' }}>ID</th>
                   <th style={{ padding: '8px', borderBottom: '2px solid #D1D5DB' }}>Category</th>
+                  <th style={{ padding: '8px', borderBottom: '2px solid #D1D5DB' }}>Type</th>
                   <th style={{ padding: '8px', borderBottom: '2px solid #D1D5DB' }}>Image</th>
                   <th style={{ padding: '8px', borderBottom: '2px solid #D1D5DB' }}>Title</th>
                   <th style={{ padding: '8px', borderBottom: '2px solid #D1D5DB' }}>Published Date</th>
@@ -289,6 +290,7 @@ function News({ user, categories, types }) {
                     <td style={{ padding: '8px', borderBottom: '1px solid #D1D5DB' }}><input type="checkbox" checked={selectedIds.has(item.id)} onChange={(e) => setSelectedIds(prev => { const newSet = new Set(prev); e.target.checked ? newSet.add(item.id) : newSet.delete(item.id); return newSet; })} /></td>
                     <td style={{ padding: '8px', borderBottom: '1px solid #D1D5DB' }}>{item.id}</td>
                     <td style={{ padding: '8px', borderBottom: '1px solid #D1D5DB' }}>{item.category?.name || 'Uncategorized'}</td>
+                    <td style={{ padding: '8px', borderBottom: '1px solid #D1D5DB' }}>{item.type?.name || 'Untyped'}</td>
                     <td style={{ padding: '8px', borderBottom: '1px solid #D1D5DB' }}>{item.media && item.media.length > 0 && renderMedia(item.media[0])}</td>
                     <td style={{ padding: '8px', borderBottom: '1px solid #D1D5DB' }}>{item.title}</td>
                     <td style={{ padding: '8px', borderBottom: '1px solid #D1D5DB' }}>{item.published_date || '07-06-2025'}</td>

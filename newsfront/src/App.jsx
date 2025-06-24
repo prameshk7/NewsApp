@@ -78,7 +78,7 @@ const AppContent = () => {
     <Routes>
       <Route
         path="/login"
-        element={user ? <Navigate to="/dashboard/" replace /> : <Login setUser={setUser} navigate={navigate} />}
+        element={user ? <Navigate to="/dashboard/news" replace /> : <Login setUser={setUser} navigate={navigate} />}
       />
       <Route
         path="/dashboard/*"
