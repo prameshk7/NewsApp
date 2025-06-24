@@ -8,8 +8,12 @@ function Blog({ user }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [selectedBlogId, setSelectedBlogId] = useState(null);
   const [previews, setPreviews] = useState([]);
+  const [isFormVisible, setIsFormVisible] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [searchTitle, setSearchTitle] = useState('');
+  const itemsPerPage = 10;
 
   useEffect(() => {
     setLoading(true);
@@ -42,7 +46,7 @@ function Blog({ user }) {
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     if (!validateFiles(files)) {
-      e.target.value = ''; // Clear input
+      e.target.value = '';
       return;
     }
     setForm({ ...form, media: files });
@@ -64,22 +68,23 @@ function Blog({ user }) {
 
     try {
       let response;
-      const url = editing ? `blogs/${selectedBlogId}/` : 'blogs/';
+      const url = editing ? `blogs/${form.id}/` : 'blogs/';
       const method = editing ? api.put : api.post;
 
       response = await method(url, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       if (editing) {
-        setBlogs(blogs.map(item => item.blg_id === selectedBlogId ? response.data : item));
+        setBlogs(blogs.map(item => item.blg_id === form.id ? response.data : item));
       } else {
         setBlogs([...blogs, response.data]);
       }
       setForm({ blg_title: '', blg_desc: '', media: [] });
       setPreviews([]);
       setEditing(false);
-      setSelectedBlogId(null);
       setError('');
+      setIsFormVisible(false);
+      setCurrentPage(1);
     } catch (err) {
       setError(`Failed to ${editing ? 'update' : 'add'} blog.`);
       console.error(err.response?.data);
@@ -89,10 +94,10 @@ function Blog({ user }) {
   };
 
   const handleEdit = (blog) => {
-    setForm({ blg_title: blog.blg_title, blg_desc: blog.blg_desc, media: [] });
+    setForm({ id: blog.blg_id, blg_title: blog.blg_title, blg_desc: blog.blg_desc, media: [] });
     setPreviews([]);
     setEditing(true);
-    setSelectedBlogId(blog.blg_id);
+    setIsFormVisible(true);
   };
 
   const handleDelete = async (id) => {
@@ -101,7 +106,14 @@ function Blog({ user }) {
       try {
         await api.delete(`blogs/${id}/`);
         setBlogs(blogs.filter(item => item.blg_id !== id));
-        setError('');
+        setSelectedIds(selectedIds => {
+          const newSet = new Set(selectedIds);
+          newSet.delete(id);
+          return newSet;
+        });
+        if (blogs.length <= itemsPerPage * (currentPage - 1) + 1 && currentPage > 1) {
+          setCurrentPage(currentPage - 1);
+        }
       } catch (err) {
         setError('Failed to delete blog.');
         console.error(err.response?.data);
@@ -111,39 +123,39 @@ function Blog({ user }) {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) {
+      setError('No items selected for bulk delete.');
+      return;
+    }
+    if (window.confirm(`Are you sure you want to delete ${selectedIds.size} item(s)?`)) {
+      setLoading(true);
+      try {
+        await Promise.all(Array.from(selectedIds).map(id => api.delete(`blogs/${id}/`)));
+        setBlogs(blogs.filter(item => !selectedIds.has(item.blg_id)));
+        setSelectedIds(new Set());
+        if (blogs.length <= itemsPerPage * (currentPage - 1) + 1 && currentPage > 1) {
+          setCurrentPage(currentPage - 1);
+        }
+        setError('');
+      } catch (err) {
+        setError('Failed to delete selected blogs.');
+        console.error(err.response?.data);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   const renderMedia = (mediaItem) => {
     const filePath = mediaItem.image;
-    console.log('File path:', filePath); // Debugging log
-    if (!filePath) {
-      console.warn('Invalid file path:', mediaItem);
-      return null;
-    }
+    if (!filePath) return null;
     const isFullUrl = filePath.startsWith('http://') || filePath.startsWith('https://');
     const src = isFullUrl ? filePath : `http://localhost:8000${filePath}`;
-    console.log('Media source:', src); // Debugging log
     const extension = filePath.split('.').pop().toLowerCase();
 
     if (['jpg', 'jpeg', 'png', 'gif'].includes(extension)) {
-      return (
-        <img
-          src={src}
-          alt="Blog media"
-          style={{ width: '50px', height: '50px', objectFit: 'cover', marginLeft: '10px' }}
-          loading="lazy"
-          onError={(e) => console.error('Image load error:', src)}
-        />
-      );
-    } else if (['mp4', 'webm', 'ogg'].includes(extension)) {
-      return (
-        <video
-          controls
-          style={{ width: '100px', height: '50px', objectFit: 'cover', marginLeft: '10px' }}
-          loading="lazy"
-        >
-          <source src={src} type={`video/${extension}`} />
-          Your browser does not support the video tag.
-        </video>
-      );
+      return <img src={src} alt="Blog media" style={{ width: '50px', height: '50px', objectFit: 'cover' }} loading="lazy" />;
     }
     return null;
   };
@@ -151,211 +163,94 @@ function Blog({ user }) {
   const renderPreview = (previewUrl, index) => {
     const extension = previewUrl.split('.').pop().toLowerCase();
     if (['jpg', 'jpeg', 'png', 'gif'].includes(extension)) {
-      return (
-        <img
-          src={previewUrl}
-          alt={`Preview ${index}`}
-          style={{ width: '100px', height: '100px', objectFit: 'cover', margin: '5px' }}
-        />
-      );
-    } else if (['mp4', 'webm', 'ogg'].includes(extension)) {
-      return (
-        <video
-          controls
-          style={{ width: '100px', height: '100px', objectFit: 'cover', margin: '5px' }}
-        >
-          <source src={previewUrl} />
-          Your browser does not support the video tag.
-        </video>
-      );
+      return <img src={previewUrl} alt={`Preview ${index}`} style={{ width: '100px', height: '100px', objectFit: 'cover', margin: '5px' }} />;
     }
     return null;
   };
 
+  const filteredBlogs = blogs.filter(b => !searchTitle || b.blg_title.toLowerCase().includes(searchTitle.toLowerCase()));
+  const totalPages = Math.ceil(filteredBlogs.length / itemsPerPage);
+  const paginatedBlogs = filteredBlogs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) setCurrentPage(page);
+  };
+
   return (
     <div style={{ padding: '24px', backgroundColor: '#F9FAFB', minHeight: 'calc(100vh - 64px)' }}>
-      <h2 style={{ fontSize: '24px', fontWeight: '600', color: '#1F2A44', marginBottom: '24px' }}>
-        Blog Management
-      </h2>
-      {error && (
-        <div
-          style={{
-            backgroundColor: '#FEE2E2',
-            color: '#DC2626',
-            padding: '8px',
-            borderRadius: '4px',
-            marginBottom: '16px',
-          }}
-        >
-          {error}
-        </div>
-      )}
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          backgroundColor: '#FFFFFF',
-          padding: '24px',
-          borderRadius: '8px',
-          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '16px',
-        }}
-      >
-        <div>
-          <label
-            style={{ fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}
-          >
-            Blog Title
-          </label>
+      <div style={{ backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)', marginBottom: '24px' }}>
+        <h2 style={{ fontSize: '24px', fontWeight: '600', color: '#1F2A44', marginBottom: '16px' }}>Blog List</h2>
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
           <input
             type="text"
-            value={form.blg_title}
-            onChange={(e) => setForm({ ...form, blg_title: e.target.value })}
-            style={{
-              width: '100%',
-              padding: '8px',
-              border: '1px solid #D1D5DB',
-              borderRadius: '4px',
-              fontSize: '16px',
-            }}
-            required
-            disabled={loading}
+            placeholder="Search by Title"
+            value={searchTitle}
+            onChange={(e) => setSearchTitle(e.target.value)}
+            style={{ padding: '8px', border: '1px solid #D1D5DB', borderRadius: '4px', flexGrow: 1 }}
           />
-        </div>
-        <div>
-          <label
-            style={{ fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}
+          <button
+            onClick={handleBulkDelete}
+            style={{ padding: '8px 16px', backgroundColor: '#1D4ED8', color: '#FFFFFF', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
           >
-            Description
-          </label>
-          <Editor
-            apiKey="178cv5oebxeklcxtalz2v56clmn153mlk5pb5zbz90723sykv0jf" // Ensure valid TinyMCE API key
-            value={form.blg_desc}
-            onEditorChange={(content) => setForm({ ...form, blg_desc: content })}
-            init={{
-              height: '200px',
-              menubar: false,
-              plugins: ['lists', 'link', 'image', 'code'],
-              toolbar:
-                'undo redo | bold italic underline | alignleft aligncenter alignright | bullist numlist outdent indent | link image code',
-            }}
-            disabled={loading}
-          />
+            Bulk Delete
+          </button>
         </div>
-        <div>
-          <label
-            style={{ fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}
-          >
-            Media Files (Images, GIFs, Videos)
-          </label>
-          <input
-            type="file"
-            multiple
-            accept="image/*,video/*,image/gif"
-            onChange={handleFileChange}
-            style={{
-              width: '100%',
-              padding: '8px',
-              border: '1px solid #D1D5DB',
-              borderRadius: '4px',
-              fontSize: '16px',
-            }}
-            disabled={loading}
-          />
-          {previews.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', marginTop: '10px' }}>
-              {previews.map((preview, index) => (
-                <div key={index}>{renderPreview(preview, index)}</div>
-              ))}
-            </div>
-          )}
-        </div>
-        <button
-          type="submit"
-          style={{
-            padding: '10px',
-            backgroundColor: '#10B981',
-            color: '#FFFFFF',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            fontSize: '16px',
-            transition: 'background-color 0.3s ease',
-          }}
-          disabled={loading}
-          onMouseOver={(e) => !loading && (e.target.style.backgroundColor = '#059669')}
-          onMouseOut={(e) => !loading && (e.target.style.backgroundColor = '#10B981')}
-        >
-          {loading ? (editing ? 'Updating...' : 'Adding...') : (editing ? 'Update Blog' : 'Add Blog')}
-        </button>
-      </form>
-      <div
-        style={{
-          marginTop: '24px',
-          backgroundColor: '#FFFFFF',
-          padding: '24px',
-          borderRadius: '8px',
-          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-        }}
+      </div>
+      <button
+        onClick={() => setIsFormVisible(!isFormVisible)}
+        style={{ padding: '10px 20px', backgroundColor: '#1D4ED8', color: '#FFFFFF', border: 'none', borderRadius: '4px', cursor: 'pointer', marginBottom: '16px' }}
       >
-        <h3 style={{ fontSize: '20px', fontWeight: '600', color: '#1F2A44', marginBottom: '16px' }}>
-          Blog List
-        </h3>
-        {loading ? (
-          <p style={{ color: '#374151' }}>Loading...</p>
-        ) : blogs.length === 0 ? (
-          <p style={{ color: '#374151' }}>No blogs available.</p>
-        ) : (
-          <ul style={{ listStyle: 'none', padding: 0 }}>
-            {blogs.map(blog => (
-              <li
-                key={blog.blg_id}
-                style={{
-                  padding: '8px',
-                  marginBottom: '8px',
-                  backgroundColor: '#F9FAFB',
-                  borderRadius: '4px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span>{blog.blg_title}</span>
-                  {blog.images &&
-                    blog.images.map((mediaItem, index) => (
-                      <span key={index}>{renderMedia(mediaItem)}</span>
-                    ))}
-                </div>
-                <div>
-                  <button
-                    onClick={() => handleEdit(blog)}
-                    style={{
-                      color: '#2563EB',
-                      border: 'none',
-                      background: 'none',
-                      cursor: 'pointer',
-                      marginRight: '10px',
-                    }}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(blog.blg_id)}
-                    style={{
-                      color: '#DC2626',
-                      border: 'none',
-                      background: 'none',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+        {isFormVisible ? 'Cancel' : 'Create Blog'}
+      </button>
+      {error && <div style={{ backgroundColor: '#FEE2E2', color: '#DC2626', padding: '8px', borderRadius: '4px', marginBottom: '16px' }}>{error}</div>}
+      {isFormVisible && (
+        <div style={{ backgroundColor: '#FFFFFF', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)', marginBottom: '24px' }}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div><label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>Blog Title</label><input type="text" value={form.blg_title} onChange={(e) => setForm({ ...form, blg_title: e.target.value })} style={{ width: '100%', padding: '8px', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '16px' }} required disabled={loading} /></div>
+            <div><label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>Description</label><Editor apiKey="178cv5oebxeklcxtalz2v56clmn1535pb5bz90723sykv0jf" value={form.blg_desc} onEditorChange={(content) => setForm({ ...form, blg_desc: content })} init={{ height: '200px', menubar: false, plugins: ['lists', 'link', 'image', 'code'], toolbar: 'undo redo | bold italic underline | alignleft aligncenter alignright | bullist numlist outdent indent | link image code' }} disabled={loading} /></div>
+            <div><label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>Media Files (Images, GIFs, Videos)</label><input type="file" multiple accept="image/*,video/*,image/gif" onChange={handleFileChange} style={{ width: '100%', padding: '8px', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '16px' }} disabled={loading} />{previews.length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', marginTop: '10px' }}>{previews.map((preview, index) => <div key={index}>{renderPreview(preview, index)}</div>)}</div>}</div>
+            <button type="submit" style={{ padding: '10px', backgroundColor: '#10B981', color: '#FFFFFF', border: 'none', borderRadius: '4px', cursor: loading ? 'not-allowed' : 'pointer', fontSize: '16px', transition: 'background-color 0.3s ease' }} disabled={loading} onMouseOver={(e) => !loading && (e.target.style.backgroundColor = '#059669')} onMouseOut={(e) => !loading && (e.target.style.backgroundColor = '#10B981')}>{loading ? (editing ? 'Updating...' : 'Adding...') : (editing ? 'Update Blog' : 'Add Blog')}</button>
+          </form>
+        </div>
+      )}
+      <div style={{ backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}>
+        {loading ? <p style={{ color: '#374151' }}>Loading...</p> : paginatedBlogs.length === 0 ? <p style={{ color: '#374151' }}>No blogs available.</p> : (
+          <>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#1E3A8A', color: '#FFFFFF' }}>
+                  <th style={{ padding: '8px', borderBottom: '2px solid #D1D5DB' }}><input type="checkbox" onChange={(e) => setSelectedIds(e.target.checked ? new Set(paginatedBlogs.map(b => b.blg_id)) : new Set())} /></th>
+                  <th style={{ padding: '8px', borderBottom: '2px solid #D1D5DB' }}>ID</th>
+                  <th style={{ padding: '8px', borderBottom: '2px solid #D1D5DB' }}>Title</th>
+                  <th style={{ padding: '8px', borderBottom: '2px solid #D1D5DB' }}>Image</th>
+                  <th style={{ padding: '8px', borderBottom: '2px solid #D1D5DB' }}>Option</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedBlogs.map(blog => (
+                  <tr key={blog.blg_id} style={{ backgroundColor: blog.blg_id % 2 === 0 ? '#F9FAFB' : '#FFFFFF' }}>
+                    <td style={{ padding: '8px', borderBottom: '1px solid #D1D5DB' }}><input type="checkbox" checked={selectedIds.has(blog.blg_id)} onChange={(e) => setSelectedIds(prev => { const newSet = new Set(prev); e.target.checked ? newSet.add(blog.blg_id) : newSet.delete(blog.blg_id); return newSet; })} /></td>
+                    <td style={{ padding: '8px', borderBottom: '1px solid #D1D5DB' }}>{blog.blg_id}</td>
+                    <td style={{ padding: '8px', borderBottom: '1px solid #D1D5DB' }}>{blog.blg_title}</td>
+                    <td style={{ padding: '8px', borderBottom: '1px solid #D1D5DB' }}>{blog.images && blog.images.map((mediaItem, index) => <span key={index}>{renderMedia(mediaItem)}</span>)}</td>
+                    <td style={{ padding: '8px', borderBottom: '1px solid #D1D5DB' }}>
+                      <button onClick={() => handleEdit(blog)} style={{ color: '#2563EB', border: 'none', background: 'none', marginRight: '10px' }}>Edit</button>
+                      <button onClick={() => handleDelete(blog.blg_id)} style={{ color: '#DC2626', border: 'none', background: 'none' }}>Delete</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {totalPages > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px', gap: '8px' }}>
+                <button onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} style={{ padding: '8px 12px', backgroundColor: currentPage === 1 ? '#E5E7EB' : '#10B981', color: '#FFFFFF', border: 'none', borderRadius: '4px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}>Previous</button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button key={page} onClick={() => handlePageChange(page)} style={{ padding: '8px 12px', backgroundColor: currentPage === page ? '#059669' : '#10B981', color: '#FFFFFF', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>{page}</button>
+                ))}
+                <button onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages} style={{ padding: '8px 12px', backgroundColor: currentPage === totalPages ? '#E5E7EB' : '#10B981', color: '#FFFFFF', border: 'none', borderRadius: '4px', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' }}>Next</button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
