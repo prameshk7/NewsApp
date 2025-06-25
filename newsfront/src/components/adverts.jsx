@@ -220,6 +220,87 @@ function Advert({ user }) {
     if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
 
+    const Modal = ({ isOpen, onClose, content }) => {
+    if (!isOpen) return null;
+
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000,
+        }}
+        onClick={onClose}
+      >
+        <div
+          style={{
+            position: 'relative',
+            backgroundColor: '#fff',
+            padding: '20px',
+            borderRadius: '8px',
+            maxWidth: '60%',
+            maxHeight: '60%',
+            overflow: 'auto',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={onClose}
+            style={{
+              position: 'absolute',
+              top: '10px',
+              right: '10px',
+              backgroundColor: '#ff4444',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '50%',
+              width: '30px',
+              height: '30px',
+              cursor: 'pointer',
+              fontSize: '16px',
+            }}
+          >
+            X
+          </button>
+          {content && content.includes('youtube.com') ? (
+            <iframe
+              width="560"
+              height="315"
+              src={content}
+              title="Video"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              style={{ border: 'none' }}
+            />
+          ) : content && ['mp4', 'webm', 'ogg'].some(ext => content.toLowerCase().endsWith(ext)) ? (
+            <video
+              width="560"
+              height="315"
+              controls
+              autoPlay
+            >
+              <source src={content} type={`video/${content.split('.').pop().toLowerCase()}`} />
+              Your browser does not support the video tag.
+            </video>
+          ) : content && ['jpg', 'jpeg', 'png', 'gif'].some(ext => content.toLowerCase().endsWith(ext)) ? (
+            <img
+              src={content}
+              alt="Popup media"
+              style={{ maxWidth: '100%', maxHeight: '100%' }}
+            />
+          ) : null}
+        </div>
+      </div>
+      );
+    };
+
   return (
     <div style={{ padding: '24px', backgroundColor: '#F9FAFB', minHeight: 'calc(100vh - 64px)' }}>
       <div style={{ backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)', marginBottom: '24px' }}>
@@ -239,6 +320,7 @@ function Advert({ user }) {
             Bulk Delete
           </button>
         </div>
+        <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} content={modalContent} />
       </div>
       <button
         onClick={() => setIsFormVisible(!isFormVisible)}
