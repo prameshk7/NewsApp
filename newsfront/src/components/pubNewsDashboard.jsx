@@ -35,10 +35,10 @@ const PubNewsDashboard = ({ user, categories, types, setCategories, setTypes, se
       { label: 'News', page: 'news' },
       { label: 'Adverts', page: 'adverts' },
       { label: 'Blogs', page: 'blogs' },
-      { label: 'Categories', page: 'categories' },
       { label: 'User', page: 'user' },
+      { label: 'Categories', page: 'categories' },
       { label: 'Types', page: 'types' },,
-      { label:'Video', page:'video' }
+      { label:'Videos', page:'video' }
     ];
     if (user && user.is_staff && !user.is_superuser) { // Add null check
       items.push({ label: 'User Management', page: 'user-management' });

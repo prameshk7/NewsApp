@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FiMenu,FiList, FiX, FiUser, FiLogOut, FiHome, FiBox, FiFileText, FiImage, FiEdit } from 'react-icons/fi';
+import { FiVideo,FiTag,FiMenu,FiList, FiX, FiUser,FiUsers, FiLogOut, FiHome, FiBox, FiFileText, FiImage, FiEdit } from 'react-icons/fi';
 
 const DashboardLayout = ({ title, sidebarItems, renderContent, currentPage, setCurrentPage, handleLogout }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -10,9 +10,10 @@ const DashboardLayout = ({ title, sidebarItems, renderContent, currentPage, setC
       case 'adverts': return <FiImage />;
       case 'blogs': return <FiEdit />;
       case 'user': return <FiUser />;
-      case 'category': return <FiList />;
-      case 'type': return <FiList />;
-      case 'dashboard': return <FiHome />;
+      case 'videos': return <FiVideo />;
+      case 'categories': return <FiList />;
+      case 'types': return <FiTag />;
+      case 'user management': return <FiUsers />;
       default: return <FiBox />;
     }
   };
