@@ -21,7 +21,9 @@ function UserAdminManagement({ user }) {
     }
     setLoading(true);
     api.get('users/')
-      .then(response => setUsers(response.data))
+      .then(response =>{
+        console.log('Users data:', response.data);
+        setUsers(response.data)})
       .catch(err => setError('Failed to fetch users.'))
       .finally(() => setLoading(false));
   }, [user]);

@@ -15,6 +15,8 @@ function News({ user, categories, types }) {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterType, setFilterType] = useState('');
   const [searchTitle, setSearchTitle] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalContent, setModalContent] = useState(null);
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -180,10 +182,49 @@ function News({ user, categories, types }) {
     const src = isFullUrl ? filePath : `http://localhost:8000${filePath}`;
     const extension = filePath.split('.').pop().toLowerCase();
 
-    if (['jpg', 'jpeg', 'png', 'gif'].includes(extension)) {
-      return <img src={src} alt="News media" style={{ width: '50px', height: '50px', objectFit: 'cover' }} loading="lazy" />;
+    const handleClick = () =>{
+      setModalContent(src);
+      setIsModalOpen(true);
     }
-    return null;
+
+
+    if (['jpg', 'jpeg', 'png', 'gif'].includes(extension)) {
+      return (
+        <div onClick={handleClick} style={{ cursor: 'pointer', display: 'inline-block' }}>
+          <img
+            src={src}
+            alt="News thumbnail"
+            style={{ width: '50px', height: '50px', objectFit: 'cover' }}
+            loading="lazy"
+            onError={(e) => {
+              console.error(`Failed to load image: ${src}`);
+              e.target.style.display = 'none';
+              e.target.nextSibling.style.display = 'inline';
+            }}
+          />
+          <span style={{ display: 'none' }}>Failed to load</span>
+        </div>
+      );
+    } else if (['mp4', 'webm', 'ogg'].includes(extension)) {
+      return (
+        <div onClick={handleClick} style={{ cursor: 'pointer', display: 'inline-block' }}>
+          <video
+            width="50"
+            height="50"
+            style={{ objectFit: 'cover' }}
+            onError={(e) => {
+              console.error(`Failed to load video: ${src}`);
+              e.target.style.display = 'none';
+              e.target.nextSibling.style.display = 'inline';
+            }}
+          >
+            <source src={src} type={`video/${extension}`} />
+          </video>
+          <span style={{ display: 'none' }}>Failed to load</span>
+        </div>
+      );
+    }
+    return <span>No media</span>;
   };
 
   const renderVideoUrl = (videoUrl) => {
@@ -191,10 +232,39 @@ function News({ user, categories, types }) {
     const youtubeMatch = videoUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
     if (youtubeMatch) {
       const videoId = youtubeMatch[1];
-      return <iframe width="100" height="56" src={`https://www.youtube.com/embed/${videoId}`} title="YouTube video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />;
+      const embedUrl = `https://www.youtube.com/embed/${videoId}`;
+
+      const handleClick = () => {
+        setModalContent(embedUrl);
+        setIsModalOpen(true);
+      };
+
+      return (
+        <div onClick={handleClick} style={{ cursor: 'pointer', display: 'inline-block' }}>
+          <iframe
+            width="50"
+            height="30"
+            src={embedUrl}
+            title="YouTube video"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            style={{ border: 'none' }}
+          />
+        </div>
+      );
     }
-    return <a href={videoUrl} target="_blank" rel="noopener noreferrer">Video Link</a>;
-  };
+    const handleClick = () => {
+      setModalContent(videoUrl);
+      setIsModalOpen(true);
+    };
+    return (
+      <div onClick={handleClick} style={{ cursor: 'pointer', display: 'inline-block' }}>
+        <a href={videoUrl} target="_blank" rel="noopener noreferrer">
+          Video Link
+        </a>
+      </div>
+    );
+};
 
   const renderPreview = (previewUrl, index) => {
     const extension = previewUrl.split('.').pop().toLowerCase();
@@ -206,8 +276,17 @@ function News({ user, categories, types }) {
 
   // Filter and search logic
   const filteredNews = news.filter(item => {
-    const matchesCategory = !filterCategory || item.category?.name === filterCategory;
-    const matchesType = !filterType || item.type?.name === filterType;
+    // Find category ID for filterCategory (name)
+    const categoryId = filterCategory
+      ? categories.find(cat => cat.name === filterCategory)?.id
+      : null;
+    // Find type ID for filterType (name)
+    const typeId = filterType
+      ? types.find(t => t.name === filterType)?.id
+      : null;
+
+    const matchesCategory = !filterCategory || item.category === categoryId;
+    const matchesType = !filterType || item.type === typeId;
     const matchesTitle = !searchTitle || item.title.toLowerCase().includes(searchTitle.toLowerCase());
     return matchesCategory && matchesType && matchesTitle;
   });
@@ -219,6 +298,98 @@ function News({ user, categories, types }) {
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
+
+  const getCategoryName = (categoryId) => {
+    const category = categories.find(cat => cat.id === Number(categoryId));
+    return category ? category.name : 'Uncategorized';
+  };
+
+  const getTypeName = (typeId) => {
+    const type = types.find(t => t.id === Number(typeId));
+    return type ? type.name : 'Untyped';
+  };
+
+  const Modal = ({ isOpen, onClose, content }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1000,
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          position: 'relative',
+          backgroundColor: '#fff',
+          padding: '20px',
+          borderRadius: '8px',
+          maxWidth: '60%',
+          maxHeight: '60%',
+          overflow: 'auto',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '10px',
+            right: '10px',
+            backgroundColor: '#ff4444',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '50%',
+            width: '30px',
+            height: '30px',
+            cursor: 'pointer',
+            fontSize: '16px',
+          }}
+        >
+          X
+        </button>
+        {content && content.includes('youtube.com') ? (
+          <iframe
+            width="560"
+            height="315"
+            src={content}
+            title="Video"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            style={{ border: 'none' }}
+          />
+        ) : content && ['mp4', 'webm', 'ogg'].some(ext => content.toLowerCase().endsWith(ext)) ? (
+          <video
+            width="560"
+            height="315"
+            controls
+            autoPlay
+          >
+            <source src={content} type={`video/${content.split('.').pop().toLowerCase()}`} />
+            Your browser does not support the video tag.
+          </video>
+        ) : content && ['jpg', 'jpeg', 'png', 'gif'].some(ext => content.toLowerCase().endsWith(ext)) ? (
+          <img
+            src={content}
+            alt="Popup media"
+            style={{ maxWidth: '100%', maxHeight: '100%' }}
+          />
+        ) : null}
+      </div>
+    </div>
+  );
+};
+
 
   return (
     <div style={{ padding: '24px', backgroundColor: '#F9FAFB', minHeight: 'calc(100vh - 64px)' }}>
@@ -247,6 +418,7 @@ function News({ user, categories, types }) {
             Bulk Delete
           </button>
         </div>
+        <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} content={modalContent} />
       </div>
       <button
         onClick={() => setIsFormVisible(!isFormVisible)}
@@ -289,11 +461,15 @@ function News({ user, categories, types }) {
                   <tr key={item.id} style={{ backgroundColor: item.id % 2 === 0 ? '#F9FAFB' : '#FFFFFF' }}>
                     <td style={{ padding: '8px', borderBottom: '1px solid #D1D5DB' }}><input type="checkbox" checked={selectedIds.has(item.id)} onChange={(e) => setSelectedIds(prev => { const newSet = new Set(prev); e.target.checked ? newSet.add(item.id) : newSet.delete(item.id); return newSet; })} /></td>
                     <td style={{ padding: '8px', borderBottom: '1px solid #D1D5DB' }}>{item.id}</td>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #D1D5DB' }}>{item.category?.name || 'Uncategorized'}</td>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #D1D5DB' }}>{item.type?.name || 'Untyped'}</td>
+                    <td style={{ padding: '8px', borderBottom: '1px solid #D1D5DB' }}>
+                      {getCategoryName(item.category)}
+                    </td>
+                    <td style={{ padding: '8px', borderBottom: '1px solid #D1D5DB' }}>
+                      {getTypeName(item.type)}
+                    </td>
                     <td style={{ padding: '8px', borderBottom: '1px solid #D1D5DB' }}>{item.media && item.media.length > 0 && renderMedia(item.media[0])}</td>
                     <td style={{ padding: '8px', borderBottom: '1px solid #D1D5DB' }}>{item.title}</td>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #D1D5DB' }}>{item.published_date || '07-06-2025'}</td>
+                    <td style={{ padding: '8px', borderBottom: '1px solid #D1D5DB' }}>{item.created_at.slice(0, 10) || '07-06-2025'}</td>
                     <td style={{ padding: '8px', borderBottom: '1px solid #D1D5DB' }}>
                       <button onClick={() => handleEdit(item)} style={{ color: '#2563EB', border: 'none', background: 'none', marginRight: '10px' }}>Edit</button>
                       <button onClick={() => handleDelete(item.id)} style={{ color: '#DC2626', border: 'none', background: 'none' }}>Delete</button>

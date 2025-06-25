@@ -12,6 +12,8 @@ function Advert({ user }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [searchAdName, setSearchAdName] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalContent, setModalContent] = useState(null);
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -152,10 +154,48 @@ function Advert({ user }) {
     const src = isFullUrl ? filePath : `http://localhost:8000${filePath}`;
     const extension = filePath.split('.').pop().toLowerCase();
 
-    if (['jpg', 'jpeg', 'png', 'gif'].includes(extension)) {
-      return <img src={src} alt="Advert media" style={{ width: '50px', height: '50px', objectFit: 'cover' }} loading="lazy" />;
+    const handleClick = () =>{
+      setModalContent(src);
+      setIsModalOpen(true);
     }
-    return null;
+
+    if (['jpg', 'jpeg', 'png', 'gif'].includes(extension)) {
+      return (
+        <div onClick={handleClick} style={{ cursor: 'pointer', display: 'inline-block' }}>
+          <img
+            src={src}
+            alt="News thumbnail"
+            style={{ width: '50px', height: '50px', objectFit: 'cover' }}
+            loading="lazy"
+            onError={(e) => {
+              console.error(`Failed to load image: ${src}`);
+              e.target.style.display = 'none';
+              e.target.nextSibling.style.display = 'inline';
+            }}
+          />
+          <span style={{ display: 'none' }}>Failed to load</span>
+        </div>
+      );
+    } else if (['mp4', 'webm', 'ogg'].includes(extension)) {
+      return (
+        <div onClick={handleClick} style={{ cursor: 'pointer', display: 'inline-block' }}>
+          <video
+            width="50"
+            height="50"
+            style={{ objectFit: 'cover' }}
+            onError={(e) => {
+              console.error(`Failed to load video: ${src}`);
+              e.target.style.display = 'none';
+              e.target.nextSibling.style.display = 'inline';
+            }}
+          >
+            <source src={src} type={`video/${extension}`} />
+          </video>
+          <span style={{ display: 'none' }}>Failed to load</span>
+        </div>
+      );
+    }
+    return <span>No media</span>;
   };
 
   const renderPreview = (previewUrl, index) => {
